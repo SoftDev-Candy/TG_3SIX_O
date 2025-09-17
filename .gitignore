@@ -1,0 +1,72 @@
+# ----------------------
+# Build artifacts
+# ----------------------
+/build/
+/cmake-build-*/
+
+# Compiled source
+*.o
+*.lo
+*.la
+*.al
+*.libs
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# ----------------------
+# CMake generated files
+# ----------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# ----------------------
+# Visual Studio
+# ----------------------
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.user
+*.suo
+*.ncb
+*.pdb
+*.idb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+
+# ----------------------
+# CLion / JetBrains
+# ----------------------
+.idea/
+*.iml
+
+# ----------------------
+# Logs / temp files
+# ----------------------
+*.log
+*.swp
+*.tmp
+
+# ----------------------
+# OS junk files
+# ----------------------
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ----------------------
+# App-specific
+# ----------------------
+todos.txt

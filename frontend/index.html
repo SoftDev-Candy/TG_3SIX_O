@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Travel Guardian 360 — Demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.95);
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .btn {
+            margin: 4px 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div>
+            <label>Src: <input id="src" type="number" value="0" min="0" max="5" /></label>
+            <label>Dst: <input id="dst" type="number" value="5" min="0" max="5" /></label>
+            <button id="routeBtn" class="btn">Compute Route</button>
+        </div>
+        <hr />
+        <div>
+            <label>Report Node: <input id="rnode" type="number" value="1" min="0" max="5" /></label>
+            <input id="rdesc" placeholder="desc" />
+            <button id="reportBtn" class="btn">Report Incident</button>
+            <button id="simulateBtn" class="btn">Simulate Incident (async)</button>
+        </div>
+        <hr />
+        <div>
+            <button id="refreshBtn" class="btn">Refresh Incidents</button>
+        </div>
+        <div id="status" style="font-size:12px;margin-top:6px;"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+const API = "http://localhost:8080";
+
+const map = L.map('map').setView([52.0, 19.0], 13); // center arbitrary
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution: '' }).addTo(map);
+
+// demo graph coordinates (6 nodes)
+const nodes = [
+  [52.00, 19.00],
+  [52.005, 19.002],
+  [52.01, 19.004],
+  [51.995, 18.99],
+  [51.998, 18.995],
+  [52.012, 19.01]
+];
+const nodeMarkers = [];
+for(let i=0;i<nodes.length;i++){
+  const m = L.circleMarker(nodes[i], {radius:8}).addTo(map).bindPopup("Node "+i);
+  nodeMarkers.push(m);
+}
+
+// demo edges: same as server graph
+const edges = [
+  [0,1],[1,2],[0,3],[3,4],[4,2],[2,5],[4,5]
+];
+const polylines = [];
+edges.forEach(e=>{
+  const a=nodes[e[0]], b=nodes[e[1]];
+  polylines.push(L.polyline([a,b]).addTo(map));
+});
+
+// UI helpers
+const statusDiv = document.getElementById('status');
+function setStatus(s){ statusDiv.innerText = s; }
+
+// Polling incidents
+let incidents = [];
+async function fetchIncidents(){
+  try{
+    const res = await fetch(API + '/incidents');
+    incidents = await res.json();
+    renderIncidents();
+  }catch(e){
+    setStatus("incidents fetch failed: "+e.message);
+  }
+}
+
+function renderIncidents(){
+  // clear previous incident markers
+  document.querySelectorAll('.incident-marker').forEach(n=>n.remove());
+  incidents.forEach(inc=>{
+    const node = inc.node_or_edge;
+    if(node>=0 && node < nodes.length){
+      const el = L.marker(nodes[node], {title:'incident'}).addTo(map);
+      el.bindPopup("Incident: "+inc.description+" (id:"+inc.id+")");
+      el._icon.classList.add('incident-marker');
+    }
+  });
+  setStatus("Incidents: "+incidents.length);
+}
+
+// route click
+document.getElementById('routeBtn').addEventListener('click', async ()=>{
+  const src = Number(document.getElementById('src').value);
+  const dst = Number(document.getElementById('dst').value);
+  setStatus("computing route...");
+  try{
+    const r = await fetch(API + '/route', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({src, dst})});
+    const j = await r.json();
+    setStatus("ETA: "+j.eta_minutes+" min | path: "+j.path.join('->'));
+    // draw path lines
+    if(window.currentPathLines){ window.currentPathLines.forEach(l=>map.removeLayer(l)); window.currentPathLines = null; }
+    const pts = j.path.map(i=>nodes[i]);
+    const line = L.polyline(pts, {color:'red', weight:4}).addTo(map);
+    window.currentPathLines = [line];
+  }catch(e){
+    setStatus("route error: "+e.message);
+  }
+});
+
+// report and simulate
+        document.getElementById('routeBtn').addEventListener('click', async () => {
+            const src = Number(document.getElementById('src').value);
+            const dst = Number(document.getElementById('dst').value);
+            setStatus("computing route...");
+            try {
+                const r = await fetch(API + '/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ src, dst }) });
+                const j = await r.json();
+                console.log('route response', j);
+
+                // Clear previous drawn lines
+                if (window.currentPathLines) { window.currentPathLines.forEach(l => map.removeLayer(l)); window.currentPathLines = null; }
+                window.currentPathLines = [];
+
+                // baseline path (dashed blue)
+                if (j.baseline && j.baseline.path && j.baseline.path.length) {
+                    const pts = j.baseline.path.map(i => nodes[i]);
+                    const line = L.polyline(pts, { dashArray: '6,6', weight: 3 }).addTo(map);
+                    window.currentPathLines.push(line);
+                }
+
+                // adjusted path (solid red)
+                if (j.adjusted && j.adjusted.path && j.adjusted.path.length) {
+                    const pts2 = j.adjusted.path.map(i => nodes[i]);
+                    const line2 = L.polyline(pts2, { color: 'red', weight: 4 }).addTo(map);
+                    window.currentPathLines.push(line2);
+                }
+
+                const baseEta = (j.baseline && j.baseline.eta_minutes >= 0) ? j.baseline.eta_minutes : 'n/a';
+                const adjEta = (j.adjusted && j.adjusted.eta_minutes >= 0) ? j.adjusted.eta_minutes : 'n/a';
+                let recText = '';
+                if (j.recommendation === 'baseline_faster') recText = 'Baseline route is faster';
+                else if (j.recommendation === 'adjusted_faster') recText = 'Alternative is faster';
+                else if (j.recommendation === 'equal') recText = 'Both equal';
+                else if (j.recommendation === 'no_path') recText = 'No path available';
+
+                setStatus(`ETA (baseline): ${baseEta} min  •  ETA (current): ${adjEta} min  •  ${recText}`);
+            } catch (e) {
+                setStatus("route error: " + e.message);
+            }
+        });
+
+
+document.getElementById('simulateBtn').addEventListener('click', async ()=>{
+  const node = Number(document.getElementById('rnode').value);
+  const desc = document.getElementById('rdesc').value || "simulated";
+  try{
+    await fetch(API + '/simulate', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({node, desc, delay_ms:400})});
+    setStatus("simulate scheduled");
+    // poll shortly after
+    setTimeout(fetchIncidents, 600);
+  }catch(e){ setStatus("simulate failed: "+e.message); }
+});
+
+
+        function subscribeEvents() {
+            const evtSource = new EventSource("http://localhost:8080/events");
+
+            evtSource.onmessage = function (event) {
+                console.log("SSE update:", event.data);
+                const data = JSON.parse(event.data);
+
+                if (data.incidents) {
+                    // Update incident list
+                    renderIncidents(data.incidents);
+
+                    // Optional: auto-recompute route if you want live ETA update
+                    if (currentSrc !== null && currentDst !== null) {
+                        computeRoute(currentSrc, currentDst);
+                    }
+                }
+            };
+
+            evtSource.onerror = function (err) {
+                console.error("SSE failed:", err);
+            };
+        }
+
+        subscribeEvents();
+
+
+
+
+document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
+
+// initial fetch + periodic polling
+fetchIncidents();
+setInterval(fetchIncidents, 1500);
+    </script>
+</body>
+</html>
