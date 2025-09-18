@@ -25,13 +25,23 @@ int Store::add_incident(const Incident& inc) {
 nlohmann::json Store::list_incidents() {
     std::lock_guard<std::mutex> g(mutex_);
     nlohmann::json a = nlohmann::json::array();
-    for (auto& p : incidents_) {
+    auto now = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    for (auto it = incidents_.begin(); it != incidents_.end(); ) {
+        const Incident& inc = it->second;
+        if (inc.expires_at != 0 && inc.expires_at <= now) {
+            // expired -> remove
+            it = incidents_.erase(it);
+            continue;
+        }
         a.push_back({
-            {"id", p.second.id},
-            {"node_or_edge", p.second.node_or_edge},
-            {"description", p.second.description},
-            {"timestamp", p.second.timestamp}
+            {"id", inc.id},
+            {"node_or_edge", inc.node_or_edge},
+            {"description", inc.description},
+            {"timestamp", inc.timestamp},
+            {"severity", inc.severity},
+            {"expires_at", inc.expires_at}
             });
+        ++it;
     }
     return a;
 }
@@ -39,7 +49,22 @@ nlohmann::json Store::list_incidents() {
 std::vector<Incident> Store::get_incidents_copy() {
     std::lock_guard<std::mutex> g(mutex_);
     std::vector<Incident> out;
-    out.reserve(incidents_.size());
-    for (auto& p : incidents_) out.push_back(p.second);
+    auto now = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    for (auto& p : incidents_) {
+        const Incident& inc = p.second;
+        if (inc.expires_at != 0 && inc.expires_at <= now) continue;
+        out.push_back(inc);
+    }
     return out;
+}
+
+void Store::remove_expired() {
+    std::lock_guard<std::mutex> g(mutex_);
+    auto now = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    for (auto it = incidents_.begin(); it != incidents_.end(); ) {
+        if (it->second.expires_at != 0 && it->second.expires_at <= now) {
+            it = incidents_.erase(it);
+        }
+        else ++it;
+    }
 }
