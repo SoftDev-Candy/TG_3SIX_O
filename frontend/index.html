@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Travel Guardian 360 — Demo</title>
+    <title>Travel Guardian 360 â€” Demo</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -53,173 +53,158 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-const API = "http://localhost:8080";
+        const API = "http://localhost:8080";
 
-const map = L.map('map').setView([52.0, 19.0], 13); // center arbitrary
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution: '' }).addTo(map);
+        const map = L.map('map').setView([52.0, 19.0], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
 
-// demo graph coordinates (6 nodes)
-const nodes = [
-  [52.00, 19.00],
-  [52.005, 19.002],
-  [52.01, 19.004],
-  [51.995, 18.99],
-  [51.998, 18.995],
-  [52.012, 19.01]
-];
-const nodeMarkers = [];
-for(let i=0;i<nodes.length;i++){
-  const m = L.circleMarker(nodes[i], {radius:8}).addTo(map).bindPopup("Node "+i);
-  nodeMarkers.push(m);
-}
+        // demo graph coordinates (6 nodes)
+        const nodes = [
+            [52.00, 19.00],
+            [52.005, 19.002],
+            [52.01, 19.004],
+            [51.995, 18.99],
+            [51.998, 18.995],
+            [52.012, 19.01]
+        ];
+        const nodeMarkers = [];
+        for (let i = 0; i < nodes.length; i++) {
+            const m = L.circleMarker(nodes[i], { radius: 8 }).addTo(map).bindPopup("Node " + i);
+            nodeMarkers.push(m);
+        }
 
-// demo edges: same as server graph
-const edges = [
-  [0,1],[1,2],[0,3],[3,4],[4,2],[2,5],[4,5]
-];
-const polylines = [];
-edges.forEach(e=>{
-  const a=nodes[e[0]], b=nodes[e[1]];
-  polylines.push(L.polyline([a,b]).addTo(map));
-});
+        // demo edges: same as server graph
+        const edges = [
+            [0, 1], [1, 2], [0, 3], [3, 4], [4, 2], [2, 5], [4, 5]
+        ];
+        edges.forEach(e => {
+            const a = nodes[e[0]], b = nodes[e[1]];
+            L.polyline([a, b]).addTo(map);
+        });
 
-// UI helpers
-const statusDiv = document.getElementById('status');
-function setStatus(s){ statusDiv.innerText = s; }
+        // UI helpers
+        const statusDiv = document.getElementById('status');
+        function setStatus(s) { statusDiv.innerText = s; }
 
-// Polling incidents
-let incidents = [];
-async function fetchIncidents(){
-  try{
-    const res = await fetch(API + '/incidents');
-    incidents = await res.json();
-    renderIncidents();
-  }catch(e){
-    setStatus("incidents fetch failed: "+e.message);
-  }
-}
+        let currentSrc = null;
+        let currentDst = null;
 
-function renderIncidents(){
-  // clear previous incident markers
-  document.querySelectorAll('.incident-marker').forEach(n=>n.remove());
-  incidents.forEach(inc=>{
-    const node = inc.node_or_edge;
-    if(node>=0 && node < nodes.length){
-      const el = L.marker(nodes[node], {title:'incident'}).addTo(map);
-      el.bindPopup("Incident: "+inc.description+" (id:"+inc.id+")");
-      el._icon.classList.add('incident-marker');
-    }
-  });
-  setStatus("Incidents: "+incidents.length);
-}
+        // incidents
+        let incidents = [];
+        async function fetchIncidents() {
+            try {
+                const res = await fetch(API + '/incidents');
+                incidents = await res.json();
+                renderIncidents(incidents);
+            } catch (e) {
+                setStatus("incidents fetch failed: " + e.message);
+            }
+        }
 
-// route click
-document.getElementById('routeBtn').addEventListener('click', async ()=>{
-  const src = Number(document.getElementById('src').value);
-  const dst = Number(document.getElementById('dst').value);
-  setStatus("computing route...");
-  try{
-    const r = await fetch(API + '/route', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({src, dst})});
-    const j = await r.json();
-    setStatus("ETA: "+j.eta_minutes+" min | path: "+j.path.join('->'));
-    // draw path lines
-    if(window.currentPathLines){ window.currentPathLines.forEach(l=>map.removeLayer(l)); window.currentPathLines = null; }
-    const pts = j.path.map(i=>nodes[i]);
-    const line = L.polyline(pts, {color:'red', weight:4}).addTo(map);
-    window.currentPathLines = [line];
-  }catch(e){
-    setStatus("route error: "+e.message);
-  }
-});
+        function renderIncidents(list) {
+            document.querySelectorAll('.incident-marker').forEach(n => n.remove());
+            list.forEach(inc => {
+                const node = inc.node_or_edge;
+                if (node >= 0 && node < nodes.length) {
+                    const el = L.marker(nodes[node], { title: 'incident' }).addTo(map);
+                    el.bindPopup("Incident: " + inc.description + " (id:" + inc.id + ")");
+                    el._icon.classList.add('incident-marker');
+                }
+            });
+            setStatus("Incidents: " + list.length);
+        }
 
-// report and simulate
-        document.getElementById('routeBtn').addEventListener('click', async () => {
-            const src = Number(document.getElementById('src').value);
-            const dst = Number(document.getElementById('dst').value);
+        // compute route
+        async function computeRoute(src, dst) {
+            currentSrc = src;
+            currentDst = dst;
             setStatus("computing route...");
             try {
-                const r = await fetch(API + '/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ src, dst }) });
+                const r = await fetch(API + '/route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ src, dst })
+                });
                 const j = await r.json();
                 console.log('route response', j);
 
-                // Clear previous drawn lines
-                if (window.currentPathLines) { window.currentPathLines.forEach(l => map.removeLayer(l)); window.currentPathLines = null; }
+                // clear previous
+                if (window.currentPathLines) { window.currentPathLines.forEach(l => map.removeLayer(l)); }
                 window.currentPathLines = [];
 
                 // baseline path (dashed blue)
-                if (j.baseline && j.baseline.path && j.baseline.path.length) {
+                if (j.baseline && j.baseline.path?.length) {
                     const pts = j.baseline.path.map(i => nodes[i]);
                     const line = L.polyline(pts, { dashArray: '6,6', weight: 3 }).addTo(map);
                     window.currentPathLines.push(line);
                 }
-
                 // adjusted path (solid red)
-                if (j.adjusted && j.adjusted.path && j.adjusted.path.length) {
+                if (j.adjusted && j.adjusted.path?.length) {
                     const pts2 = j.adjusted.path.map(i => nodes[i]);
                     const line2 = L.polyline(pts2, { color: 'red', weight: 4 }).addTo(map);
                     window.currentPathLines.push(line2);
                 }
 
-                const baseEta = (j.baseline && j.baseline.eta_minutes >= 0) ? j.baseline.eta_minutes : 'n/a';
-                const adjEta = (j.adjusted && j.adjusted.eta_minutes >= 0) ? j.adjusted.eta_minutes : 'n/a';
+                const baseEta = (j.baseline?.eta_minutes >= 0) ? j.baseline.eta_minutes : 'n/a';
+                const adjEta = (j.adjusted?.eta_minutes >= 0) ? j.adjusted.eta_minutes : 'n/a';
                 let recText = '';
                 if (j.recommendation === 'baseline_faster') recText = 'Baseline route is faster';
                 else if (j.recommendation === 'adjusted_faster') recText = 'Alternative is faster';
                 else if (j.recommendation === 'equal') recText = 'Both equal';
                 else if (j.recommendation === 'no_path') recText = 'No path available';
 
-                setStatus(`ETA (baseline): ${baseEta} min  •  ETA (current): ${adjEta} min  •  ${recText}`);
+                setStatus(`ETA (baseline): ${baseEta} min  |  ETA (current): ${adjEta} min  |  ${recText}`);
             } catch (e) {
                 setStatus("route error: " + e.message);
             }
+        }
+
+        document.getElementById('routeBtn').addEventListener('click', () => {
+            const src = Number(document.getElementById('src').value);
+            const dst = Number(document.getElementById('dst').value);
+            computeRoute(src, dst);
         });
 
+        // simulate incident
+        document.getElementById('simulateBtn').addEventListener('click', async () => {
+            const node = Number(document.getElementById('rnode').value);
+            const desc = document.getElementById('rdesc').value || "simulated";
+            try {
+                await fetch(API + '/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node, desc, delay_ms: 400 })
+                });
+                setStatus("simulate scheduled");
+                setTimeout(fetchIncidents, 600);
+            } catch (e) { setStatus("simulate failed: " + e.message); }
+        });
 
-document.getElementById('simulateBtn').addEventListener('click', async ()=>{
-  const node = Number(document.getElementById('rnode').value);
-  const desc = document.getElementById('rdesc').value || "simulated";
-  try{
-    await fetch(API + '/simulate', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({node, desc, delay_ms:400})});
-    setStatus("simulate scheduled");
-    // poll shortly after
-    setTimeout(fetchIncidents, 600);
-  }catch(e){ setStatus("simulate failed: "+e.message); }
-});
+        // refresh button
+        document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
 
-
+        // subscribe to SSE
         function subscribeEvents() {
-            const evtSource = new EventSource("http://localhost:8080/events");
-
+            const evtSource = new EventSource(API + "/events");
             evtSource.onmessage = function (event) {
                 console.log("SSE update:", event.data);
                 const data = JSON.parse(event.data);
-
                 if (data.incidents) {
-                    // Update incident list
                     renderIncidents(data.incidents);
-
-                    // Optional: auto-recompute route if you want live ETA update
                     if (currentSrc !== null && currentDst !== null) {
                         computeRoute(currentSrc, currentDst);
                     }
                 }
             };
-
             evtSource.onerror = function (err) {
                 console.error("SSE failed:", err);
             };
         }
-
         subscribeEvents();
 
-
-
-
-document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
-
-// initial fetch + periodic polling
-fetchIncidents();
-setInterval(fetchIncidents, 1500);
+        // initial
+        fetchIncidents();
+        setInterval(fetchIncidents, 1500);
     </script>
 </body>
 </html>

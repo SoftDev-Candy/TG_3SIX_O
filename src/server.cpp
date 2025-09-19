@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cmath>   // for std::ceil
 
 Store STORE;
 
@@ -24,26 +25,27 @@ void run_server(int port) {
     httplib::Server svr;
     Graph GRAPH = build_demo_graph();
 
-    // CORS helper (call this at the start of every handler)
+    // CORS helper
     auto set_cors = [](httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
         };
 
-    // Preflight handler for all endpoints
-    svr.Options(".*", [](const httplib::Request& /*req*/, httplib::Response& res) {
+    // Preflight handler
+    svr.Options(".*", [](const httplib::Request&, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
         res.status = 200;
         });
 
+    // ----------- Handlers ------------
+
     // /status
     svr.Get("/status", [&set_cors](const httplib::Request&, httplib::Response& res) {
         set_cors(res);
-        nlohmann::json j = { {"status","ok"} };
-        res.set_content(j.dump(), "application/json");
+        res.set_content(nlohmann::json({ {"status","ok"} }).dump(), "application/json");
         });
 
     // POST /trip
@@ -55,8 +57,7 @@ void run_server(int port) {
             int dst = body.value("dst", 0);
             Trip t; t.src = src; t.dst = dst; t.user = body.value("user", "demo");
             int id = STORE.add_trip(t);
-            nlohmann::json r = { {"trip_id", id} };
-            res.set_content(r.dump(), "application/json");
+            res.set_content(nlohmann::json({ {"trip_id", id} }).dump(), "application/json");
             std::cout << "[trip] id=" << id << " src=" << src << " dst=" << dst << "\n";
         }
         catch (const std::exception& e) {
@@ -74,8 +75,7 @@ void run_server(int port) {
             inc.node_or_edge = body.value("node", 0);
             inc.description = body.value("desc", std::string("reported incident"));
             int id = STORE.add_incident(inc);
-            nlohmann::json r = { {"incident_id", id} };
-            res.set_content(r.dump(), "application/json");
+            res.set_content(nlohmann::json({ {"incident_id", id} }).dump(), "application/json");
             std::cout << "[report] id=" << id << " node=" << inc.node_or_edge << " desc=" << inc.description << "\n";
         }
         catch (const std::exception& e) {
@@ -84,28 +84,39 @@ void run_server(int port) {
         }
         });
 
-    // POST /simulate { "node":1, "desc":"accident", "delay_ms":0 }
+    // POST /simulate
     svr.Post("/simulate", [&set_cors](const httplib::Request& req, httplib::Response& res) {
         set_cors(res);
         try {
             auto body = nlohmann::json::parse(req.body);
             int node = body.value("node", 0);
-            std::string desc = body.value("desc", std::string("simulated incident"));
+            std::string desc = body.value("desc", "simulated incident");
             int delay_ms = body.value("delay_ms", 0);
+            int severity = body.value("severity", 1);
+            int duration_s = body.value("duration_s", 60);
 
-            nlohmann::json r = { {"scheduled", true}, {"node", node}, {"delay_ms", delay_ms} };
-            res.set_content(r.dump(), "application/json");
-            std::cout << "[simulate] scheduled node=" << node << " delay_ms=" << delay_ms << " desc=" << desc << "\n";
+            res.set_content(nlohmann::json({
+                {"scheduled", true},
+                {"node", node},
+                {"delay_ms", delay_ms},
+                {"severity", severity},
+                {"duration_s", duration_s}
+                }).dump(), "application/json");
 
-            // schedule the incident asynchronously (capture delay_ms)
-            std::thread([node, desc, delay_ms]() {
+            std::thread([node, desc, delay_ms, severity, duration_s]() {
                 if (delay_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
                 else std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
                 Incident inc;
                 inc.node_or_edge = node;
                 inc.description = desc;
+                inc.severity = severity;
+                auto now = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                inc.timestamp = now;
+                if (duration_s > 0) inc.expires_at = now + duration_s;
                 int id = STORE.add_incident(inc);
-                std::cout << "[simulate] injected incident id=" << id << " node=" << node << "\n";
+                std::cout << "[simulate] injected incident id=" << id << " node=" << node
+                    << " severity=" << severity << " expires_at=" << inc.expires_at << "\n";
                 }).detach();
 
         }
@@ -118,8 +129,7 @@ void run_server(int port) {
     // GET /incidents
     svr.Get("/incidents", [&set_cors](const httplib::Request&, httplib::Response& res) {
         set_cors(res);
-        auto j = STORE.list_incidents();
-        res.set_content(j.dump(), "application/json");
+        res.set_content(STORE.list_incidents().dump(), "application/json");
         });
 
     // POST /route
@@ -135,34 +145,34 @@ void run_server(int port) {
                 return;
             }
 
-            // 1) baseline: copy original GRAPH as baseline_graph
-            Graph baseline = GRAPH; // shallow copy of structure (adj lists)
-            // 2) adjusted: make a copy and increase weights near incidents
+            Graph baseline = GRAPH;
             Graph adjusted = GRAPH;
 
-            // Choose how much an incident increases adjacent travel time (tune for demo)
-            const double INCIDENT_WEIGHT_MULTIPLIER = 2.0; // 2x slower for affected edges
+            const double INCIDENT_WEIGHT_MULTIPLIER = 2.0;
 
-            // Get incidents (thread-safe copy)
             auto incidents = STORE.get_incidents_copy();
+            // for each incident:
             for (const auto& inc : incidents) {
                 int node = inc.node_or_edge;
-                if (node < 0 || node >= adjusted.n) continue;
-                // Increase weight of every edge *from* the affected node
+                int severity = inc.severity;
+                double multiplier = 1.0;
+                if (severity <= 1) multiplier = 1.5;      // minor : 1.5x
+                else if (severity == 2) multiplier = 2.2; // moderate : 2.2x
+                else multiplier = 3.0;                   // major : 3x
+
+                // increase outgoing
                 for (auto& e : adjusted.adj[node]) {
-                    e.w = static_cast<long long>(std::ceil(e.w * INCIDENT_WEIGHT_MULTIPLIER));
+                    e.w = static_cast<long long>(std::ceil(e.w * multiplier));
                 }
-                // Optionally increase weights of edges *to* the node as well (for undirected graph)
+                // increase incoming
                 for (int u = 0; u < adjusted.n; ++u) {
                     for (auto& e : adjusted.adj[u]) {
-                        if (e.to == node) {
-                            e.w = static_cast<long long>(std::ceil(e.w * INCIDENT_WEIGHT_MULTIPLIER));
-                        }
+                        if (e.to == node) e.w = static_cast<long long>(std::ceil(e.w * multiplier));
                     }
                 }
             }
 
-            // Run Dijkstra on baseline and adjusted
+
             auto res_base = dijkstra(baseline, src);
             auto path_base = recover_path(res_base, src, dst);
             long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
@@ -171,18 +181,12 @@ void run_server(int port) {
             auto path_adj = recover_path(res_adj, src, dst);
             long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
 
-            // Build response
             nlohmann::json r;
             r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
             r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
-            // recommendation: which is better?
             if (eta_base >= 0 && eta_adj >= 0) {
-                if (eta_adj > eta_base) {
-                    r["recommendation"] = "baseline_faster";
-                }
-                else if (eta_adj < eta_base) {
-                    r["recommendation"] = "adjusted_faster";
-                }
+                if (eta_adj > eta_base) r["recommendation"] = "baseline_faster";
+                else if (eta_adj < eta_base) r["recommendation"] = "adjusted_faster";
                 else r["recommendation"] = "equal";
             }
             else if (eta_base >= 0) {
@@ -194,7 +198,6 @@ void run_server(int port) {
             else {
                 r["recommendation"] = "no_path";
             }
-
             res.set_content(r.dump(), "application/json");
         }
         catch (const std::exception& e) {
@@ -210,13 +213,9 @@ void run_server(int port) {
         res.set_header("Cache-Control", "no-cache");
         res.set_header("Connection", "keep-alive");
 
-        // keep connection open
-        res.set_chunked_content_provider(
-            "text/event-stream",
-            [](size_t /*offset*/, httplib::DataSink& sink) {
+        res.set_chunked_content_provider("text/event-stream",
+            [](size_t, httplib::DataSink& sink) {
                 while (true) {
-                    // Get incidents snapshot
-                    
                     auto incidents = STORE.get_incidents_copy();
                     nlohmann::json arr = nlohmann::json::array();
                     for (const auto& inc : incidents) {
@@ -227,22 +226,16 @@ void run_server(int port) {
                             {"timestamp", inc.timestamp}
                             });
                     }
-
-                    nlohmann::json j;
-                    j["incidents"] = arr;
-
-                    // SSE format: "data: <json>\n\n"
-                    std::string msg = "data: " + j.dump() + "\n\n";
+                    std::string msg = "data: " + nlohmann::json({ {"incidents", arr} }).dump() + "\n\n";
                     sink.write(msg.c_str(), msg.size());
 
                     std::this_thread::sleep_for(std::chrono::seconds(2));
+                    STORE.remove_expired();
                 }
                 return true;
             }
         );
         });
-
-
 
     std::cout << "Server starting on port " << port << " ...\n";
     svr.listen("0.0.0.0", port);
