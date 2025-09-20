@@ -20,11 +20,48 @@
             background: rgba(255,255,255,0.95);
             padding: 8px;
             border-radius: 6px;
+            font-family: sans-serif;
+            font-size: 13px;
+            width: 320px;
         }
 
         .btn {
-            margin: 4px 0;
+            margin: 6px 0;
             width: 100%;
+        }
+
+        #status {
+            font-size: 12px;
+            margin-top: 6px;
+            color: #333;
+        }
+
+        #status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 8px 12px;
+            font-family: sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        #event-log {
+            position: fixed;
+            bottom: 64px;
+            right: 10px;
+            width: 300px;
+            max-height: 260px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #aaa;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 6px;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -32,179 +69,347 @@
     <div id="controls">
         <div>
             <label>Src: <input id="src" type="number" value="0" min="0" max="5" /></label>
-            <label>Dst: <input id="dst" type="number" value="5" min="0" max="5" /></label>
+            <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="5" /></label>
             <button id="routeBtn" class="btn">Compute Route</button>
         </div>
         <hr />
         <div>
-            <label>Report Node: <input id="rnode" type="number" value="1" min="0" max="5" /></label>
-            <input id="rdesc" placeholder="desc" />
-            <button id="reportBtn" class="btn">Report Incident</button>
-            <button id="simulateBtn" class="btn">Simulate Incident (async)</button>
+            <label>Report Node: <input id="rnode" type="number" value="1" min="0" max="5" style="width:70px" /></label>
+            <input id="rdesc" placeholder="description" style="width:100%;margin-top:6px" />
+            <div style="display:flex;gap:8px;margin-top:6px">
+                <select id="rseverity" style="flex:1">
+                    <option value="1">Minor</option>
+                    <option value="2" selected>Moderate</option>
+                    <option value="3">Major</option>
+                </select>
+                <input id="rduration" type="number" value="120" min="5" max="3600" style="width:100px" />
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+                <button id="reportBtn" class="btn" style="flex:1">Report Incident</button>
+                <button id="simulateBtn" class="btn" style="flex:1">Simulate (async)</button>
+            </div>
         </div>
         <hr />
         <div>
             <button id="refreshBtn" class="btn">Refresh Incidents</button>
         </div>
-        <div id="status" style="font-size:12px;margin-top:6px;"></div>
+        <div id="status">Status: idle</div>
     </div>
 
     <div id="map"></div>
 
+    <div id="status-bar">Status: Waiting for route...</div>
+    <div id="event-log"></div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        /* =========================
+           Configuration
+           ========================= */
         const API = "http://localhost:8080";
 
-        const map = L.map('map').setView([52.0, 19.0], 13);
+        /* Debounce / UX tuning */
+        const ROUTE_DEBOUNCE_MS = 600;     // how long to coalesce route recomputes
+        const SSE_RECONNECT_MS = 4000;     // if SSE dies, try reconnect after this ms
+
+        /* Keep state */
+        let currentSrc = null, currentDst = null;
+        let _lastRouteCompute = 0;
+        let _routeComputeTimeout = null;
+        let _fitBoundsDone = false;
+
+        /* Map & nodes
+           - set map center and node coordinates together so nodes lie on visible roads.
+           - change these coordinates to whatever city/area you want.
+        */
+        const map = L.map('map').setView([50.0642, 19.9895], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
 
-        // demo graph coordinates (6 nodes)
+        // Default 6 node coords (Kraków example). Replace with your desired lat/lon points.
         const nodes = [
-            [52.00, 19.00],
-            [52.005, 19.002],
-            [52.01, 19.004],
-            [51.995, 18.99],
-            [51.998, 18.995],
-            [52.012, 19.01]
+            [50.0646, 19.9892],
+            [50.0663, 19.9887],
+            [50.0674, 19.9886],
+            [50.0674, 19.9888],
+            [50.0644, 19.9895],
+            [50.0656, 19.9968]
         ];
+
+        /* draw static node markers & edges for context */
         const nodeMarkers = [];
         for (let i = 0; i < nodes.length; i++) {
-            const m = L.circleMarker(nodes[i], { radius: 8 }).addTo(map).bindPopup("Node " + i);
+            const m = L.circleMarker(nodes[i], { radius: 7, color: '#222', fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindPopup("Node " + i);
             nodeMarkers.push(m);
         }
-
-        // demo edges: same as server graph
-        const edges = [
-            [0, 1], [1, 2], [0, 3], [3, 4], [4, 2], [2, 5], [4, 5]
-        ];
+        const edges = [[0, 1], [1, 2], [0, 3], [3, 4], [4, 2], [2, 5], [4, 5]];
         edges.forEach(e => {
             const a = nodes[e[0]], b = nodes[e[1]];
-            L.polyline([a, b]).addTo(map);
+            L.polyline([a, b], { color: '#888', weight: 2, opacity: 0.6 }).addTo(map);
         });
 
-        // UI helpers
-        const statusDiv = document.getElementById('status');
-        function setStatus(s) { statusDiv.innerText = s; }
+        /* =========================
+           UI helpers
+           ========================= */
+        function setStatus(s) {
+            const statusDiv = document.getElementById('status');
+            if (statusDiv) statusDiv.innerText = s;
+            const bar = document.getElementById('status-bar');
+            if (bar) bar.innerText = "Status: " + s;
+        }
 
-        let currentSrc = null;
-        let currentDst = null;
+        /* Route drawing: keep references to lines and update in-place for smoothness */
+        window.currentPathLines = window.currentPathLines || { baselineLine: null, adjustedLine: null };
 
-        // incidents
-        let incidents = [];
+        /* =========================
+           Incident marker management (incremental)
+           ========================= */
+        window.incidentMap = window.incidentMap || new Map();
+        let _lastIncidentsSerialized = "";
+
+        function createSeverityMarker(latlng, severity) {
+            const color = (severity >= 3) ? '#b30000' : (severity === 2 ? '#ff8c00' : '#ffd700');
+            return L.circleMarker(latlng, { radius: 9, fillColor: color, color: '#222', weight: 1, fillOpacity: 0.95 });
+        }
+
+        const logDiv = document.getElementById("event-log");
+        function pushLogLine(text, severity = 1) {
+            if (!logDiv) return;
+            const p = document.createElement('div');
+            p.textContent = text;
+            if (severity >= 3) { p.style.color = "darkred"; p.style.fontWeight = "700"; }
+            else if (severity === 2) { p.style.color = "darkorange"; }
+            else { p.style.color = "#333"; }
+            logDiv.insertBefore(p, logDiv.firstChild);
+            while (logDiv.childNodes.length > 40) logDiv.removeChild(logDiv.lastChild);
+        }
+
+        function renderIncidentsIncremental(list) {
+            const incoming = new Map();
+            (list || []).forEach(i => incoming.set(String(i.id), i));
+
+            // remove cleared
+            for (const [id, entry] of window.incidentMap.entries()) {
+                if (!incoming.has(id)) {
+                    try { map.removeLayer(entry.marker); } catch (e) { }
+                    window.incidentMap.delete(id);
+                    pushLogLine(`[${new Date().toLocaleTimeString()}] Cleared id=${id}`, 1);
+                }
+            }
+
+            // add/update incoming
+            incoming.forEach((inc, id) => {
+                const prev = window.incidentMap.get(id);
+                const severity = inc.severity || 1;
+                const latlng = nodes[inc.node_or_edge];
+                if (!latlng) return; // invalid node
+
+                if (!prev) {
+                    const m = createSeverityMarker(latlng, severity).addTo(map);
+                    const sevLabel = severity >= 3 ? 'Major' : (severity === 2 ? 'Moderate' : 'Minor');
+                    m.bindPopup(`<div style="font-size:13px"><strong>🚧 Node ${inc.node_or_edge}</strong><br/>${inc.description || 'incident'}<br/>Severity: <b>${sevLabel}</b><br/>id: ${inc.id}</div>`);
+                    window.incidentMap.set(id, { marker: m, inc: JSON.stringify(inc) });
+                    pushLogLine(`[${new Date().toLocaleTimeString()}] New: node=${inc.node_or_edge} (${sevLabel}) id=${id}`, severity);
+                } else {
+                    const serialized = JSON.stringify(inc);
+                    if (serialized !== prev.inc) {
+                        // update style/popup
+                        try {
+                            prev.marker.setStyle && prev.marker.setStyle({ fillColor: (severity >= 3) ? '#b30000' : (severity === 2 ? '#ff8c00' : '#ffd700') });
+                            prev.marker.setPopupContent && prev.marker.setPopupContent(`<div style="font-size:13px"><strong>🚧 Node ${inc.node_or_edge}</strong><br/>${inc.description || 'incident'}<br/>Severity: <b>${severity >= 3 ? 'Major' : (severity === 2 ? 'Moderate' : 'Minor')}</b><br/>id: ${inc.id}</div>`);
+                        } catch (e) { }
+                        prev.inc = serialized;
+                        pushLogLine(`[${new Date().toLocaleTimeString()}] Updated id=${id}`, severity);
+                    }
+                }
+            });
+
+            setStatus("Incidents: " + (list ? list.length : 0));
+        }
+
+        /* =========================
+           Fetch incidents (fallback)
+           ========================= */
         async function fetchIncidents() {
             try {
                 const res = await fetch(API + '/incidents');
-                incidents = await res.json();
-                renderIncidents(incidents);
+                const arr = await res.json();
+                renderIncidentsIncremental(arr);
             } catch (e) {
                 setStatus("incidents fetch failed: " + e.message);
             }
         }
 
-        function renderIncidents(list) {
-            document.querySelectorAll('.incident-marker').forEach(n => n.remove());
-            list.forEach(inc => {
-                const node = inc.node_or_edge;
-                if (node >= 0 && node < nodes.length) {
-                    const el = L.marker(nodes[node], { title: 'incident' }).addTo(map);
-                    el.bindPopup("Incident: " + inc.description + " (id:" + inc.id + ")");
-                    el._icon.classList.add('incident-marker');
-                }
-            });
-            setStatus("Incidents: " + list.length);
-        }
-
-        // compute route
+        /* =========================
+           Route computation (debounced, smooth draw)
+           ========================= */
         async function computeRoute(src, dst) {
-            currentSrc = src;
-            currentDst = dst;
+            const now = Date.now();
+            if (now - _lastRouteCompute < ROUTE_DEBOUNCE_MS) {
+                if (_routeComputeTimeout) clearTimeout(_routeComputeTimeout);
+                _routeComputeTimeout = setTimeout(() => { _routeComputeTimeout = null; computeRoute(src, dst); }, ROUTE_DEBOUNCE_MS);
+                return;
+            }
+            _lastRouteCompute = now;
+            currentSrc = src; currentDst = dst;
             setStatus("computing route...");
+
             try {
-                const r = await fetch(API + '/route', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ src, dst })
-                });
+                const r = await fetch(API + '/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ src, dst }) });
                 const j = await r.json();
-                console.log('route response', j);
+                console.log("route response", j);
 
-                // clear previous
-                if (window.currentPathLines) { window.currentPathLines.forEach(l => map.removeLayer(l)); }
-                window.currentPathLines = [];
+                // prepare pts
+                let baselinePts = null, adjustedPts = null;
+                if (j.baseline && Array.isArray(j.baseline.path) && j.baseline.path.length) baselinePts = j.baseline.path.map(i => nodes[i]);
+                if (j.adjusted && Array.isArray(j.adjusted.path) && j.adjusted.path.length) adjustedPts = j.adjusted.path.map(i => nodes[i]);
 
-                // baseline path (dashed blue)
-                if (j.baseline && j.baseline.path?.length) {
-                    const pts = j.baseline.path.map(i => nodes[i]);
-                    const line = L.polyline(pts, { dashArray: '6,6', weight: 3 }).addTo(map);
-                    window.currentPathLines.push(line);
+                // baseline (dashed blue)
+                if (baselinePts) {
+                    if (window.currentPathLines.baselineLine) {
+                        window.currentPathLines.baselineLine.setLatLngs(baselinePts);
+                    } else {
+                        window.currentPathLines.baselineLine = L.polyline(baselinePts, { dashArray: '6,6', weight: 3, color: '#0077cc' }).addTo(map);
+                    }
+                } else {
+                    if (window.currentPathLines.baselineLine) { map.removeLayer(window.currentPathLines.baselineLine); window.currentPathLines.baselineLine = null; }
                 }
-                // adjusted path (solid red)
-                if (j.adjusted && j.adjusted.path?.length) {
-                    const pts2 = j.adjusted.path.map(i => nodes[i]);
-                    const line2 = L.polyline(pts2, { color: 'red', weight: 4 }).addTo(map);
-                    window.currentPathLines.push(line2);
+
+                // adjusted (solid red)
+                if (adjustedPts) {
+                    if (window.currentPathLines.adjustedLine) {
+                        window.currentPathLines.adjustedLine.setLatLngs(adjustedPts);
+                    } else {
+                        window.currentPathLines.adjustedLine = L.polyline(adjustedPts, { color: 'red', weight: 4 }).addTo(map);
+                    }
+                } else {
+                    if (window.currentPathLines.adjustedLine) { map.removeLayer(window.currentPathLines.adjustedLine); window.currentPathLines.adjustedLine = null; }
                 }
 
-                const baseEta = (j.baseline?.eta_minutes >= 0) ? j.baseline.eta_minutes : 'n/a';
-                const adjEta = (j.adjusted?.eta_minutes >= 0) ? j.adjusted.eta_minutes : 'n/a';
+                // compute ETAs and saved text
+                const baseEta = (j.baseline && typeof j.baseline.eta_minutes === 'number') ? j.baseline.eta_minutes : null;
+                const adjEta = (j.adjusted && typeof j.adjusted.eta_minutes === 'number') ? j.adjusted.eta_minutes : null;
                 let recText = '';
                 if (j.recommendation === 'baseline_faster') recText = 'Baseline route is faster';
                 else if (j.recommendation === 'adjusted_faster') recText = 'Alternative is faster';
                 else if (j.recommendation === 'equal') recText = 'Both equal';
                 else if (j.recommendation === 'no_path') recText = 'No path available';
 
-                setStatus(`ETA (baseline): ${baseEta} min  |  ETA (current): ${adjEta} min  |  ${recText}`);
+                let savedText = '';
+                if (baseEta !== null && adjEta !== null) {
+                    const diff = baseEta - adjEta;
+                    if (diff > 0) savedText = ` ✅ Baseline faster by ${Math.abs(diff)} min`;
+                    else if (diff < 0) savedText = ` 🚀 Adjusted faster by ${Math.abs(diff)} min`;
+                    else savedText = ` ⚖ Equal time`;
+                } else if (baseEta !== null && adjEta === null) savedText = ` ⚠ Only baseline available`;
+                else if (adjEta !== null && baseEta === null) savedText = ` ⚠ Only adjusted available`;
+
+                const baseText = baseEta !== null ? `${baseEta} min` : 'n/a';
+                const adjText = adjEta !== null ? `${adjEta} min` : 'n/a';
+                setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText} | ${recText}${savedText}`);
+
+                // fit bounds only once to avoid jumping
+                try {
+                    if (!_fitBoundsDone) {
+                        const allPts = [];
+                        if (baselinePts) allPts.push(...baselinePts);
+                        if (adjustedPts) allPts.push(...adjustedPts);
+                        if (allPts.length) {
+                            const bounds = L.latLngBounds(allPts);
+                            map.fitBounds(bounds.pad(0.2), { animate: true });
+                            _fitBoundsDone = true;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+
             } catch (e) {
                 setStatus("route error: " + e.message);
             }
         }
 
+        /* =========================
+           UI bindings
+           ========================= */
         document.getElementById('routeBtn').addEventListener('click', () => {
             const src = Number(document.getElementById('src').value);
             const dst = Number(document.getElementById('dst').value);
             computeRoute(src, dst);
         });
 
-        // simulate incident
         document.getElementById('simulateBtn').addEventListener('click', async () => {
             const node = Number(document.getElementById('rnode').value);
             const desc = document.getElementById('rdesc').value || "simulated";
+            const severity = Number(document.getElementById('rseverity').value || 2);
+            const duration_s = Number(document.getElementById('rduration').value || 120);
             try {
-                await fetch(API + '/simulate', {
+                const r = await fetch(API + '/simulate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ node, desc, delay_ms: 400 })
+                    body: JSON.stringify({ node, desc, delay_ms: 200, severity, duration_s })
                 });
-                setStatus("simulate scheduled");
-                setTimeout(fetchIncidents, 600);
-            } catch (e) { setStatus("simulate failed: " + e.message); }
+                const j = await r.json();
+                console.log("simulate response", j);
+                setStatus("simulate scheduled (server accepted)");
+            } catch (e) { setStatus("simulate failed: " + e.message); console.error(e); }
         });
 
-        // refresh button
+        document.getElementById('reportBtn').addEventListener('click', async () => {
+            const node = Number(document.getElementById('rnode').value);
+            const desc = document.getElementById('rdesc').value || "reported";
+            const severity = Number(document.getElementById('rseverity').value || 2);
+            const duration_s = Number(document.getElementById('rduration').value || 120);
+            try {
+                const r = await fetch(API + '/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node, desc, severity, duration_s })
+                });
+                const j = await r.json();
+                console.log("report response", j);
+                setStatus("report submitted");
+            } catch (e) { setStatus("report failed: " + e.message); console.error(e); }
+        });
+
         document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
 
-        // subscribe to SSE
+        /* =========================
+           SSE subscribe (reconnect on error)
+           ========================= */
         function subscribeEvents() {
-            const evtSource = new EventSource(API + "/events");
-            evtSource.onmessage = function (event) {
-                console.log("SSE update:", event.data);
-                const data = JSON.parse(event.data);
-                if (data.incidents) {
-                    renderIncidents(data.incidents);
-                    if (currentSrc !== null && currentDst !== null) {
-                        computeRoute(currentSrc, currentDst);
+            let evt = null;
+
+            function connect() {
+                evt = new EventSource(API + "/events");
+                evt.onopen = () => { console.log("SSE connected"); pushLogLine(`[${new Date().toLocaleTimeString()}] SSE connected`, 1); };
+                evt.onmessage = function (ev) {
+                    try {
+                        const data = JSON.parse(ev.data);
+                        const list = data.incidents || [];
+                        // avoid updating if identical (handled inside renderIncidentsIncremental too)
+                        const serialized = JSON.stringify(list.map(i => ({ id: i.id, node: i.node_or_edge, sev: i.severity, expires: i.expires_at })));
+                        if (serialized !== _lastIncidentsSerialized) {
+                            _lastIncidentsSerialized = serialized;
+                            renderIncidentsIncremental(list);
+                        }
+                    } catch (err) {
+                        console.error("SSE parse error", err, ev.data);
                     }
-                }
-            };
-            evtSource.onerror = function (err) {
-                console.error("SSE failed:", err);
-            };
+                };
+                evt.onerror = (err) => {
+                    console.error("SSE error", err);
+                    pushLogLine(`[${new Date().toLocaleTimeString()}] SSE connection error — reconnecting...`, 1);
+                    try { evt.close(); } catch (e) { }
+                    setTimeout(connect, SSE_RECONNECT_MS);
+                };
+            }
+
+            connect();
         }
+
         subscribeEvents();
 
-        // initial
+        /* initial fallback */
         fetchIncidents();
-        setInterval(fetchIncidents, 1500);
+        setInterval(fetchIncidents, 30000); // very infrequent fallback polling
     </script>
 </body>
 </html>

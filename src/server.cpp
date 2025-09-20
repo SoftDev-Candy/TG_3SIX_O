@@ -3,6 +3,13 @@
 #include <thread>
 #include <chrono>
 #include <cmath>   // for std::ceil
+#include <condition_variable>
+#include <atomic>
+
+
+static std::mutex g_events_mutex;
+static std::condition_variable g_events_cv;
+static std::atomic<bool> g_events_flag{ false };
 
 Store STORE;
 
@@ -130,6 +137,9 @@ void run_server(int port) {
     svr.Get("/incidents", [&set_cors](const httplib::Request&, httplib::Response& res) {
         set_cors(res);
         res.set_content(STORE.list_incidents().dump(), "application/json");
+        g_events_flag.store(true);
+        g_events_cv.notify_all();
+
         });
 
     // POST /route
@@ -171,6 +181,8 @@ void run_server(int port) {
                     }
                 }
             }
+            g_events_flag.store(true);
+            g_events_cv.notify_all();
 
 
             auto res_base = dijkstra(baseline, src);
@@ -208,34 +220,37 @@ void run_server(int port) {
 
     // GET /events  (Server-Sent Events)
     svr.Get("/events", [&set_cors](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
+        set_cors(res);
         res.set_header("Content-Type", "text/event-stream");
         res.set_header("Cache-Control", "no-cache");
         res.set_header("Connection", "keep-alive");
 
-        res.set_chunked_content_provider("text/event-stream",
-            [](size_t, httplib::DataSink& sink) {
-                while (true) {
-                    auto incidents = STORE.get_incidents_copy();
-                    nlohmann::json arr = nlohmann::json::array();
-                    for (const auto& inc : incidents) {
-                        arr.push_back({
-                            {"id", inc.id},
-                            {"node_or_edge", inc.node_or_edge},
-                            {"description", inc.description},
-                            {"timestamp", inc.timestamp}
-                            });
-                    }
-                    std::string msg = "data: " + nlohmann::json({ {"incidents", arr} }).dump() + "\n\n";
-                    sink.write(msg.c_str(), msg.size());
+        res.set_chunked_content_provider(
+            "text/event-stream",
+            [](size_t /*offset*/, httplib::DataSink& sink) {
+                // send initial greeting
+                std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
+                sink.write(init.c_str(), init.size());
 
-                    std::this_thread::sleep_for(std::chrono::seconds(2));
-                    STORE.remove_expired();
+                std::unique_lock<std::mutex> lk(g_events_mutex);
+                while (sink.is_writable()) {
+                    // Wait until notified or timeout (keeps connection alive)
+                    g_events_cv.wait_for(lk, std::chrono::seconds(2));
+
+                    // Build JSON of active incidents
+                    auto incidents = STORE.list_incidents(); // already a JSON array
+                    nlohmann::json j; j["incidents"] = incidents;
+                    std::string msg = "data: " + j.dump() + "\n\n";
+
+                    if (!sink.is_writable()) break;
+                    sink.write(msg.c_str(), msg.size());
                 }
                 return true;
             }
         );
+
         });
+
 
     std::cout << "Server starting on port " << port << " ...\n";
     svr.listen("0.0.0.0", port);
