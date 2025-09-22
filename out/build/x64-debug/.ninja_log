@@ -1,13 +1,12 @@
 # ninja log v6
-65	866	7800651309716787	CMakeFiles/guardian.dir/src/dijkstra.cpp.obj	42e9e5a7284bbc34
-60	2657	7800651309666708	CMakeFiles/guardian.dir/src/store.cpp.obj	5bdd091a67b8656a
-5571	6350	7800651364770155	guardian.exe	83caef25ba940f4a
-48	4374	7800651309536729	CMakeFiles/guardian.dir/src/main.cpp.obj	8b9aeb0f235826
-55	5571	7800651309616704	CMakeFiles/guardian.dir/src/server.cpp.obj	bc12912d2c344079
 21	230	7800693280252061	CMakeFiles/guardian.dir/src/dijkstra.cpp.obj	7c802488a17edaf3
-18	993	7800693280230573	CMakeFiles/guardian.dir/src/store.cpp.obj	1f7bf646febdd940
-12	1829	7800693280164477	CMakeFiles/guardian.dir/src/main.cpp.obj	37da2b629b1e4bb
-16	2390	7800693280196723	CMakeFiles/guardian.dir/src/server.cpp.obj	ae4c169047ce9251
-2390	2743	7800693303950753	guardian.exe	fcf5cb5e898fc50e
-33	2610	7800711512826487	CMakeFiles/guardian.dir/src/server.cpp.obj	ae4c169047ce9251
 2611	2865	7800711538607245	guardian.exe	fcf5cb5e898fc50e
+18	993	7800693280230573	CMakeFiles/guardian.dir/src/store.cpp.obj	1f7bf646febdd940
+33	2610	7800711512826487	CMakeFiles/guardian.dir/src/server.cpp.obj	ae4c169047ce9251
+12	1829	7800693280164477	CMakeFiles/guardian.dir/src/main.cpp.obj	37da2b629b1e4bb
+58	640	7801767277318228	build.ninja	f80c5671d0cf082f
+55	1193	7801767279239076	CMakeFiles/guardian.dir/src/dijkstra.cpp.obj	42e9e5a7284bbc34
+48	2924	7801767279168998	CMakeFiles/guardian.dir/src/store.cpp.obj	5bdd091a67b8656a
+37	4580	7801767279059032	CMakeFiles/guardian.dir/src/main.cpp.obj	8b9aeb0f235826
+43	5704	7801767279119022	CMakeFiles/guardian.dir/src/server.cpp.obj	bc12912d2c344079
+5704	6184	7801767335734923	guardian.exe	83caef25ba940f4a

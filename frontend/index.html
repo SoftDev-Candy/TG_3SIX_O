@@ -96,9 +96,46 @@
         <div id="status">Status: idle</div>
     </div>
 
-    <div id="map"></div>
+    <div id="map"></div> <!--map is here-->
+    <!--//status bar div-->
+    <div id="status-bar" style="
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.9); color: #fff; padding: 8px 12px;
+  font-family: sans-serif; font-size:14px; z-index:1000; display:flex;
+  gap:12px; align-items:center; justify-content:space-between;
+">
+        <div>
+            <strong id="sb-title">Status:</strong>
+            <span id="sb-text">Waiting for route...</span>
+        </div>
 
-    <div id="status-bar">Status: Waiting for route...</div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div style="text-align:center;">
+                <div style="font-size:11px; opacity:0.8">Baseline ETA</div>
+                <div id="eta-baseline" style="font-size:18px; font-weight:700;">—</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:11px; opacity:0.8">Current ETA</div>
+                <div id="eta-current" style="font-size:18px; font-weight:700;">—</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:11px; opacity:0.8">Recommendation</div>
+                <div id="eta-rec" style="font-size:14px; font-weight:700; color:#ffd700;">—</div>
+            </div>
+            <div id="eta-saved" style="padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.12); font-weight:700;"></div>
+        </div>
+    </div>
+
+    <!--ETA display temp fix-->
+    <div id="etaDisplay" style="
+  position:absolute; top:10px; right:10px;
+  background:white; padding:6px 10px; border-radius:6px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
+  font-family:sans-serif; font-size:14px; z-index:1000;
+">
+        ETA will appear here
+    </div>
+
     <div id="event-log"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -303,9 +340,35 @@
                 } else if (baseEta !== null && adjEta === null) savedText = ` ⚠ Only baseline available`;
                 else if (adjEta !== null && baseEta === null) savedText = ` ⚠ Only adjusted available`;
 
-                const baseText = baseEta !== null ? `${baseEta} min` : 'n/a';
-                const adjText = adjEta !== null ? `${adjEta} min` : 'n/a';
-                setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText} | ${recText}${savedText}`);
+                // --- SAFE ETA DOM UPDATES ---
+                try {
+                    const baseText = baseEta !== null ? `${baseEta} min` : 'n/a';
+                    const adjText = adjEta !== null ? `${adjEta} min` : 'n/a';
+                    const recTextSafe = recText || '—';
+                    const savedTextSafe = savedText || '';
+
+                    // status bar fields
+                    const etaBaseEl = document.getElementById('eta-baseline');
+                    const etaCurEl = document.getElementById('eta-current');
+                    const etaRecEl = document.getElementById('eta-rec');
+                    const etaSavedEl = document.getElementById('eta-saved');
+                    if (etaBaseEl) etaBaseEl.innerText = baseText;
+                    if (etaCurEl) etaCurEl.innerText = adjText;
+                    if (etaRecEl) etaRecEl.innerText = recTextSafe;
+                    if (etaSavedEl) etaSavedEl.innerText = savedTextSafe;
+
+                    // status line
+                    setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText}`);
+
+                    // top-right persistent ETA display
+                    const etaDisplay = document.getElementById('etaDisplay');
+                    if (etaDisplay) {
+                        etaDisplay.innerText =
+                            `Baseline: ${baseText} | Adjusted: ${adjText} | ${recTextSafe} ${savedTextSafe}`;
+                    }
+                } catch (domErr) {
+                    console.error("ETA DOM update failed:", domErr);
+                }
 
                 // fit bounds only once to avoid jumping
                 try {
