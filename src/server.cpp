@@ -2,40 +2,63 @@
     #include <iostream>
     #include <thread>
     #include <chrono>
-    #include <cmath>   // for std::ceil
+    #include <cmath>   // for std::ceil vimp forgot add it last time i'm dum dum 
     #include <condition_variable>
     #include <atomic>
-#include <cstdint>
 
-struct Monitor { int id; int src, dst; int threshold_minutes; };
+
+// Simple monitor structure
+struct Monitor {
+    int id;
+    int src, dst;
+    int threshold_minutes;
+    long long created_at;
+};
 static std::mutex g_mon_mutex;
 static std::vector<Monitor> g_monitors;
 static int g_next_monitor_id = 1;
 
-    static std::mutex g_events_mutex;
-    static std::condition_variable g_events_cv;
-    static std::atomic<bool> g_events_flag{ false };
+static std::mutex g_events_mutex;
+static std::condition_variable g_events_cv;
+static std::atomic<bool> g_events_flag{ false };
 
-    Store STORE;
+Store STORE;
 
-    // Build a small demo graph (undirected with symmetrical edges for simplicity)
-    Graph build_demo_graph() {
-        Graph g(6);
-        // edges with weights (minutes)
-        g.add_edge(0, 1, 5); g.add_edge(1, 0, 5);
-        g.add_edge(1, 2, 5); g.add_edge(2, 1, 5);
-        g.add_edge(0, 3, 10); g.add_edge(3, 0, 10);
-        g.add_edge(3, 4, 3); g.add_edge(4, 3, 3);
-        g.add_edge(4, 2, 2); g.add_edge(2, 4, 2);
-        g.add_edge(2, 5, 7); g.add_edge(5, 2, 7);
-        g.add_edge(4, 5, 6); g.add_edge(5, 4, 6);
-        g.n = 6;
-        return g;
-    }
+// Build demo graph
+Graph build_demo_graph() {
+    Graph g(6);
+    g.add_edge(0, 1, 5); g.add_edge(1, 0, 5);
+    g.add_edge(1, 2, 5); g.add_edge(2, 1, 5);
+    g.add_edge(0, 3, 10); g.add_edge(3, 0, 10);
+    g.add_edge(3, 4, 3); g.add_edge(4, 3, 3);
+    g.add_edge(4, 2, 2); g.add_edge(2, 4, 2);
+    g.add_edge(2, 5, 7); g.add_edge(5, 2, 7);
+    g.add_edge(4, 5, 6); g.add_edge(5, 4, 6);
+    g.n = 6;
+    return g;
+}
+
 
     void run_server(int port) {
         httplib::Server svr;
         Graph GRAPH = build_demo_graph();
+        // start background cleaner thread: removes expired incidents periodically
+        std::thread([]() {
+            while (true) {
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                try {
+                    STORE.remove_expired(); // ensure Store::remove_expired is thread-safe
+                    // notify SSE clients that incidents may have changed
+                    g_events_flag.store(true);
+                    g_events_cv.notify_all();
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "[cleaner] exception: " << e.what() << "\n";
+                }
+            }
+            }).detach();
+
+
 
         // CORS helper
         auto set_cors = [](httplib::Response& res) {
@@ -51,6 +74,49 @@ static int g_next_monitor_id = 1;
             res.set_header("Access-Control-Allow-Headers", "Content-Type");
             res.status = 200;
             });
+
+        // POST /monitor { "src":0, "dst":5, "threshold": 3 }
+
+    // POST /monitor
+        svr.Post("/monitor", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                int src = body.value("src", 0);
+                int dst = body.value("dst", 0);
+                int threshold = body.value("threshold", 3);
+                Monitor m;
+                m.id = g_next_monitor_id++;
+                m.src = src;
+                m.dst = dst;
+                m.threshold_minutes = threshold;
+                m.created_at = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                {
+                    std::lock_guard<std::mutex> lg(g_mon_mutex);
+                    g_monitors.push_back(m);
+                }
+                res.set_content(nlohmann::json({ {"monitor_id", m.id} }).dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+        // GET /monitors
+        svr.Get("/monitors", [&set_cors](const httplib::Request&, httplib::Response& res) {
+            set_cors(res);
+            nlohmann::json arr = nlohmann::json::array();
+            {
+                std::lock_guard<std::mutex> lk(g_mon_mutex);
+                for (auto& m : g_monitors) {
+                    arr.push_back({ {"id", m.id}, {"src", m.src}, {"dst", m.dst}, {"threshold", m.threshold_minutes}, {"created_at", m.created_at} });
+                }
+            }
+            res.set_content(arr.dump(), "application/json");
+            });
+
+
 
         // ----------- Handlers ------------
 
@@ -273,6 +339,7 @@ static int g_next_monitor_id = 1;
                     res.set_content(nlohmann::json({ {"error","invalid node"} }).dump(), "application/json");
                     return;
                 }
+
                 auto compute_route_pair = [&GRAPH](int src, int dst) -> nlohmann::json {
                     Graph baseline = GRAPH;
                     Graph adjusted = GRAPH;
@@ -305,19 +372,15 @@ static int g_next_monitor_id = 1;
                     return r;
                     };
 
-                // Correct call:
-                auto pair = compute_route_pair(src, dst); // <-- no GRAPH argument
+                auto pair = compute_route_pair(src, dst);
 
                 long long eta_base = pair["baseline"]["eta_minutes"].get<long long>();
                 long long eta_adj = pair["adjusted"]["eta_minutes"].get<long long>();
 
-                // ask DNA for predicted incremental delay for the path (TransitDNA should expose such a function)
-                // We'll assume TransitDNA has: predict_delay_for_path(vector<int> path) -> minutes (double)
                 double dna_pred = 0.0;
                 try {
-                    // use baseline path as canonical
                     auto path = pair["baseline"]["path"].get<std::vector<int>>();
-                    dna_pred = DNA.predict_delay_for_path(path); // implement in TransitDNA
+                    dna_pred = DNA.predict_delay_for_path(path);
                 }
                 catch (...) { dna_pred = 0.0; }
 
@@ -325,7 +388,7 @@ static int g_next_monitor_id = 1;
                 r["baseline"] = pair["baseline"];
                 r["adjusted"] = pair["adjusted"];
                 r["dna_predicted_extra_minutes"] = dna_pred;
-                r["dna_message"] = DNA.summary_short(); // optional short string
+                r["dna_message"] = DNA.summary_short();
                 res.set_content(r.dump(), "application/json");
             }
             catch (const std::exception& e) {
@@ -335,7 +398,9 @@ static int g_next_monitor_id = 1;
             });
 
 
+
         // GET /events  (Server-Sent Events)
+      // GET /events  (Server-Sent Events)
         svr.Get("/events", [&set_cors, &GRAPH](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
             res.set_header("Content-Type", "text/event-stream");
@@ -345,22 +410,23 @@ static int g_next_monitor_id = 1;
             res.set_chunked_content_provider(
                 "text/event-stream",
                 [&GRAPH](size_t /*offset*/, httplib::DataSink& sink) {
-                    // Send initial greeting
-                    {
-                        std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
-                        sink.write(init.c_str(), init.size());
-                    }
+                    // send initial greeting
+                    std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
+                    sink.write(init.c_str(), init.size());
 
                     std::unique_lock<std::mutex> lk(g_events_mutex);
-
                     auto compute_route_pair = [&GRAPH](int src, int dst) -> nlohmann::json {
                         Graph baseline = GRAPH;
                         Graph adjusted = GRAPH;
                         auto incidents = STORE.get_incidents_copy();
+
                         for (const auto& inc : incidents) {
                             int node = inc.node_or_edge;
                             double multiplier = (inc.severity <= 1) ? 1.5 : (inc.severity == 2 ? 2.2 : 3.0);
-                            for (auto& e : adjusted.adj[node]) e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+
+                            for (auto& e : adjusted.adj[node])
+                                e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+
                             for (int u = 0; u < adjusted.n; ++u)
                                 for (auto& e : adjusted.adj[u])
                                     if (e.to == node)
@@ -374,7 +440,7 @@ static int g_next_monitor_id = 1;
                         auto res_adj = dijkstra(adjusted, src);
                         auto path_adj = recover_path(res_adj, src, dst);
                         long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
-                       
+
                         nlohmann::json r;
                         r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
                         r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
@@ -382,52 +448,23 @@ static int g_next_monitor_id = 1;
                         };
 
                     while (sink.is_writable()) {
-                        // Wait until notified or timeout (keeps connection alive)
                         g_events_cv.wait_for(lk, std::chrono::seconds(2));
 
-                        // Build JSON of active incidents
-                        auto incidents = STORE.list_incidents(); // JSON array
                         nlohmann::json j;
-                        j["incidents"] = incidents;
+                        j["incidents"] = STORE.list_incidents();
 
-                        // DNA summary
-                        try {
-                            std::string dna_s = DNA.exportSummaryJSON();
-                            j["dna_summary"] = nlohmann::json::parse(dna_s);
-                        }
-                        catch (...) {
-                            j["dna_summary"] = nlohmann::json::object();
-                        }
+                        // Optional: DNA summary
+                        try { j["dna_summary"] = nlohmann::json::parse(DNA.exportSummaryJSON()); }
+                        catch (...) { j["dna_summary"] = nlohmann::json::object(); }
 
-                        // Monitor alerts
-                        nlohmann::json alerts = nlohmann::json::array();
+                        // Alerts for monitors
+                        std::vector<Monitor> monitors_copy;
                         {
-                            std::lock_guard<std::mutex> lg(g_mon_mutex);
-                            for (const auto& m : g_monitors) {
-                                try {
-                                    auto pair = compute_route_pair(m.src, m.dst);
-                                    long long eta_base = pair["baseline"]["eta_minutes"].get<long long>();
-                                    long long eta_adj = pair["adjusted"]["eta_minutes"].get<long long>();
-                                    if (eta_base >= 0 && eta_adj >= 0) {
-                                        long long delta = eta_adj - eta_base;
-                                        if (delta >= m.threshold_minutes) {
-                                            alerts.push_back({
-                                                {"monitor_id", m.id},
-                                                {"src", m.src},
-                                                {"dst", m.dst},
-                                                {"eta_base", eta_base},
-                                                {"eta_adj", eta_adj},
-                                                {"delta", delta}
-                                                });
-                                        }
-                                    }
-                                }
-                                catch (...) { /* ignore per-monitor errors */ }
-                            }
+                            std::lock_guard<std::mutex> lg(g_mon_mutex); // correct mutex
+                            monitors_copy = g_monitors;
                         }
-                        j["monitor_alerts"] = alerts;
 
-                        // Send event
+
                         std::string msg = "data: " + j.dump() + "\n\n";
                         if (!sink.is_writable()) break;
                         sink.write(msg.c_str(), msg.size());

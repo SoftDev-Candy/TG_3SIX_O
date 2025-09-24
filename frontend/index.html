@@ -71,6 +71,8 @@
             <label>Src: <input id="src" type="number" value="0" min="0" max="5" /></label>
             <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="5" /></label>
             <button id="routeBtn" class="btn">Compute Route</button>
+            <button id="monitorBtn" class="btn">Monitor this route (threshold: <input id="monitorThreshold" type="number" value="3" min="1" style="width:60px"> min)</button>
+
         </div>
         <hr />
         <div>
@@ -449,7 +451,6 @@
                 setStatus("simulate scheduled (server accepted)");
             } catch (e) { setStatus("simulate failed: " + e.message); console.error(e); }
         });
-
         document.getElementById('reportBtn').addEventListener('click', async () => {
             const node = Number(document.getElementById('rnode').value);
             const desc = document.getElementById('rdesc').value || "reported";
@@ -468,6 +469,47 @@
         });
 
         document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
+
+        // monitor button handler
+        document.getElementById('monitorBtn').addEventListener('click', async () => {
+            const src = Number(document.getElementById('src').value);
+            const dst = Number(document.getElementById('dst').value);
+            const threshold = Number(document.getElementById('monitorThreshold').value || 3);
+            try {
+                const r = await fetch(API + '/monitor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ src, dst, threshold })
+                });
+                const j = await r.json();
+                if (j.monitor_id) {
+                    pushLogLine(`Monitoring route ${src}->${dst} (id:${j.monitor_id}) threshold:${threshold}min`, 1);
+                } else {
+                    pushLogLine(`Monitor failed: ${JSON.stringify(j)}`, 1);
+                }
+            } catch (e) {
+                pushLogLine(`Monitor POST error: ${e.message}`, 1);
+            }
+        });
+
+        // inside your SSE onmessage handler (where you parse data), add:
+        if (data.monitor_alerts && data.monitor_alerts.length) {
+            data.monitor_alerts.forEach(a => {
+                // friendly text
+                const text = `[ALERT] route ${a.src}->${a.dst} delayed by ${a.delta} min (eta ${a.eta_adj} vs baseline ${a.eta_base})`;
+                pushLogLine(text, 3);
+                // visual: flash status or show toast
+                setStatus("ALERT: " + text);
+                // optionally show a big callout on map or highlight lines:
+                if (window.currentPathLines && window.currentPathLines.adjustedLine) {
+                    // briefly pulse the adjusted line
+                    window.currentPathLines.adjustedLine.setStyle({ color: '#ff0000', weight: 6 });
+                    setTimeout(() => {
+                        if (window.currentPathLines.adjustedLine) window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 });
+                    }, 4000);
+                }
+            });
+        }
 
         /* =========================
            SSE subscribe (reconnect on error)
