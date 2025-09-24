@@ -220,6 +220,39 @@
             while (logDiv.childNodes.length > 40) logDiv.removeChild(logDiv.lastChild);
         }
 
+        function formatIncident(inc) {
+            let sevLabel = "Unknown";
+            let sevIcon = "❓";
+            let msg = "";
+
+            switch (inc.severity) {
+                case 1:
+                    sevLabel = "Minor";
+                    sevIcon = "⚠️";
+                    msg = `Minor delay at Stop ${inc.node_or_edge} (expect ~2 min longer)`;
+                    break;
+                case 2:
+                    sevLabel = "Moderate";
+                    sevIcon = "🚧";
+                    msg = `Moderate disruption at Stop ${inc.node_or_edge} (expect ~5–10 min longer)`;
+                    break;
+                case 3:
+                    sevLabel = "Major";
+                    sevIcon = "🚨";
+                    msg = `Major disruption at Stop ${inc.node_or_edge} — severe delays likely`;
+                    break;
+                default:
+                    msg = `Incident at Stop ${inc.node_or_edge}`;
+            }
+
+            return {
+                label: sevLabel,
+                icon: sevIcon,
+                message: msg,
+                raw: inc
+            };
+        }
+
         function renderIncidentsIncremental(list) {
             const incoming = new Map();
             (list || []).forEach(i => incoming.set(String(i.id), i));
@@ -240,28 +273,30 @@
                 const latlng = nodes[inc.node_or_edge];
                 if (!latlng) return; // invalid node
 
+                const fmt = formatIncident(inc); // friendly text
+
                 if (!prev) {
                     const m = createSeverityMarker(latlng, severity).addTo(map);
-                    const sevLabel = severity >= 3 ? 'Major' : (severity === 2 ? 'Moderate' : 'Minor');
-                    m.bindPopup(`<div style="font-size:13px"><strong>🚧 Node ${inc.node_or_edge}</strong><br/>${inc.description || 'incident'}<br/>Severity: <b>${sevLabel}</b><br/>id: ${inc.id}</div>`);
+                    m.bindPopup(`<div style="font-size:13px"><strong>${fmt.message}</strong><br/><em>${inc.description || ''}</em><br/>id: ${inc.id}</div>`);
                     window.incidentMap.set(id, { marker: m, inc: JSON.stringify(inc) });
-                    pushLogLine(`[${new Date().toLocaleTimeString()}] New: node=${inc.node_or_edge} (${sevLabel}) id=${id}`, severity);
+                    pushLogLine(`[${new Date().toLocaleTimeString()}] New: ${fmt.message} (id:${id})`, severity);
                 } else {
                     const serialized = JSON.stringify(inc);
                     if (serialized !== prev.inc) {
                         // update style/popup
                         try {
                             prev.marker.setStyle && prev.marker.setStyle({ fillColor: (severity >= 3) ? '#b30000' : (severity === 2 ? '#ff8c00' : '#ffd700') });
-                            prev.marker.setPopupContent && prev.marker.setPopupContent(`<div style="font-size:13px"><strong>🚧 Node ${inc.node_or_edge}</strong><br/>${inc.description || 'incident'}<br/>Severity: <b>${severity >= 3 ? 'Major' : (severity === 2 ? 'Moderate' : 'Minor')}</b><br/>id: ${inc.id}</div>`);
-                        } catch (e) { }
+                            prev.marker.setPopupContent && prev.marker.setPopupContent(`<div style="font-size:13px"><strong>${fmt.message}</strong><br/><em>${inc.description || ''}</em><br/>id: ${inc.id}</div>`);
+                        } catch (e) { /* ignore popup update errors */ }
                         prev.inc = serialized;
-                        pushLogLine(`[${new Date().toLocaleTimeString()}] Updated id=${id}`, severity);
+                        pushLogLine(`[${new Date().toLocaleTimeString()}] Updated: ${fmt.message} (id:${id})`, severity);
                     }
                 }
             });
 
             setStatus("Incidents: " + (list ? list.length : 0));
         }
+
 
         /* =========================
            Fetch incidents (fallback)
