@@ -19,6 +19,7 @@ add_executable(guardian
     src/server.cpp
     src/store.cpp
     src/dijkstra.cpp
+    src/TransitDNA.cpp
 )
 
 find_package(Threads REQUIRED)

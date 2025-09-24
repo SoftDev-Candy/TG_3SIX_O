@@ -5,7 +5,12 @@
     #include <cmath>   // for std::ceil
     #include <condition_variable>
     #include <atomic>
+#include <cstdint>
 
+struct Monitor { int id; int src, dst; int threshold_minutes; };
+static std::mutex g_mon_mutex;
+static std::vector<Monitor> g_monitors;
+static int g_next_monitor_id = 1;
 
     static std::mutex g_events_mutex;
     static std::condition_variable g_events_cv;
@@ -193,6 +198,17 @@
                 auto path_adj = recover_path(res_adj, src, dst);
                 long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
 
+                if (eta_base >= 0 && eta_adj >= 0 && eta_adj > eta_base) {
+                    long long diff = eta_adj - eta_base;
+                    if (!incidents.empty()) {
+                        DNA.logIncidentImpact(
+                            incidents[0].node_or_edge,
+                            incidents[0].severity,
+                            diff
+                        );
+                    }
+                }
+
                 nlohmann::json r;
                 r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
                 r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
@@ -218,8 +234,109 @@
             }
             });
 
+        svr.Get("/dna", [&set_cors](const httplib::Request&, httplib::Response& res) {
+            set_cors(res);
+            res.set_content(DNA.exportSummaryJSON(), "application/json");
+            });
+
+        // New endpoint to register monitor
+        svr.Post("/monitor", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                int src = body.value("src", 0);
+                int dst = body.value("dst", 0);
+                int threshold = body.value("threshold", 3);
+                Monitor m; m.id = g_next_monitor_id++; m.src = src; m.dst = dst; m.threshold_minutes = threshold;
+                {
+                    std::lock_guard<std::mutex> lg(g_mon_mutex);
+                    g_monitors.push_back(m);
+                }
+                nlohmann::json r = { {"monitor_id", m.id} };
+                res.set_content(r.dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+        // POST /predict  { "src":0, "dst":5, "persona": { ... } }
+        svr.Post("/predict", [&set_cors, &GRAPH](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                int src = body.value("src", 0);
+                int dst = body.value("dst", 0);
+                if (src < 0 || src >= GRAPH.n || dst < 0 || dst >= GRAPH.n) {
+                    res.status = 400;
+                    res.set_content(nlohmann::json({ {"error","invalid node"} }).dump(), "application/json");
+                    return;
+                }
+                auto compute_route_pair = [&GRAPH](int src, int dst) -> nlohmann::json {
+                    Graph baseline = GRAPH;
+                    Graph adjusted = GRAPH;
+                    auto incidents = STORE.get_incidents_copy();
+
+                    for (const auto& inc : incidents) {
+                        int node = inc.node_or_edge;
+                        double multiplier = (inc.severity <= 1) ? 1.5 : (inc.severity == 2 ? 2.2 : 3.0);
+
+                        for (auto& e : adjusted.adj[node])
+                            e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+
+                        for (int u = 0; u < adjusted.n; ++u)
+                            for (auto& e : adjusted.adj[u])
+                                if (e.to == node)
+                                    e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+                    }
+
+                    auto res_base = dijkstra(baseline, src);
+                    auto path_base = recover_path(res_base, src, dst);
+                    long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
+
+                    auto res_adj = dijkstra(adjusted, src);
+                    auto path_adj = recover_path(res_adj, src, dst);
+                    long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
+
+                    nlohmann::json r;
+                    r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
+                    r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
+                    return r;
+                    };
+
+                // Correct call:
+                auto pair = compute_route_pair(src, dst); // <-- no GRAPH argument
+
+                long long eta_base = pair["baseline"]["eta_minutes"].get<long long>();
+                long long eta_adj = pair["adjusted"]["eta_minutes"].get<long long>();
+
+                // ask DNA for predicted incremental delay for the path (TransitDNA should expose such a function)
+                // We'll assume TransitDNA has: predict_delay_for_path(vector<int> path) -> minutes (double)
+                double dna_pred = 0.0;
+                try {
+                    // use baseline path as canonical
+                    auto path = pair["baseline"]["path"].get<std::vector<int>>();
+                    dna_pred = DNA.predict_delay_for_path(path); // implement in TransitDNA
+                }
+                catch (...) { dna_pred = 0.0; }
+
+                nlohmann::json r;
+                r["baseline"] = pair["baseline"];
+                r["adjusted"] = pair["adjusted"];
+                r["dna_predicted_extra_minutes"] = dna_pred;
+                r["dna_message"] = DNA.summary_short(); // optional short string
+                res.set_content(r.dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+
         // GET /events  (Server-Sent Events)
-        svr.Get("/events", [&set_cors](const httplib::Request&, httplib::Response& res) {
+        svr.Get("/events", [&set_cors, &GRAPH](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
             res.set_header("Content-Type", "text/event-stream");
             res.set_header("Cache-Control", "no-cache");
@@ -227,28 +344,97 @@
 
             res.set_chunked_content_provider(
                 "text/event-stream",
-                [](size_t /*offset*/, httplib::DataSink& sink) {
-                    // send initial greeting
-                    std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
-                    sink.write(init.c_str(), init.size());
+                [&GRAPH](size_t /*offset*/, httplib::DataSink& sink) {
+                    // Send initial greeting
+                    {
+                        std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
+                        sink.write(init.c_str(), init.size());
+                    }
 
                     std::unique_lock<std::mutex> lk(g_events_mutex);
+
+                    auto compute_route_pair = [&GRAPH](int src, int dst) -> nlohmann::json {
+                        Graph baseline = GRAPH;
+                        Graph adjusted = GRAPH;
+                        auto incidents = STORE.get_incidents_copy();
+                        for (const auto& inc : incidents) {
+                            int node = inc.node_or_edge;
+                            double multiplier = (inc.severity <= 1) ? 1.5 : (inc.severity == 2 ? 2.2 : 3.0);
+                            for (auto& e : adjusted.adj[node]) e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+                            for (int u = 0; u < adjusted.n; ++u)
+                                for (auto& e : adjusted.adj[u])
+                                    if (e.to == node)
+                                        e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+                        }
+
+                        auto res_base = dijkstra(baseline, src);
+                        auto path_base = recover_path(res_base, src, dst);
+                        long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
+
+                        auto res_adj = dijkstra(adjusted, src);
+                        auto path_adj = recover_path(res_adj, src, dst);
+                        long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
+                       
+                        nlohmann::json r;
+                        r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
+                        r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
+                        return r;
+                        };
+
                     while (sink.is_writable()) {
                         // Wait until notified or timeout (keeps connection alive)
                         g_events_cv.wait_for(lk, std::chrono::seconds(2));
 
                         // Build JSON of active incidents
-                        auto incidents = STORE.list_incidents(); // already a JSON array
-                        nlohmann::json j; j["incidents"] = incidents;
-                        std::string msg = "data: " + j.dump() + "\n\n";
+                        auto incidents = STORE.list_incidents(); // JSON array
+                        nlohmann::json j;
+                        j["incidents"] = incidents;
 
+                        // DNA summary
+                        try {
+                            std::string dna_s = DNA.exportSummaryJSON();
+                            j["dna_summary"] = nlohmann::json::parse(dna_s);
+                        }
+                        catch (...) {
+                            j["dna_summary"] = nlohmann::json::object();
+                        }
+
+                        // Monitor alerts
+                        nlohmann::json alerts = nlohmann::json::array();
+                        {
+                            std::lock_guard<std::mutex> lg(g_mon_mutex);
+                            for (const auto& m : g_monitors) {
+                                try {
+                                    auto pair = compute_route_pair(m.src, m.dst);
+                                    long long eta_base = pair["baseline"]["eta_minutes"].get<long long>();
+                                    long long eta_adj = pair["adjusted"]["eta_minutes"].get<long long>();
+                                    if (eta_base >= 0 && eta_adj >= 0) {
+                                        long long delta = eta_adj - eta_base;
+                                        if (delta >= m.threshold_minutes) {
+                                            alerts.push_back({
+                                                {"monitor_id", m.id},
+                                                {"src", m.src},
+                                                {"dst", m.dst},
+                                                {"eta_base", eta_base},
+                                                {"eta_adj", eta_adj},
+                                                {"delta", delta}
+                                                });
+                                        }
+                                    }
+                                }
+                                catch (...) { /* ignore per-monitor errors */ }
+                            }
+                        }
+                        j["monitor_alerts"] = alerts;
+
+                        // Send event
+                        std::string msg = "data: " + j.dump() + "\n\n";
                         if (!sink.is_writable()) break;
                         sink.write(msg.c_str(), msg.size());
                     }
                     return true;
                 }
             );
-
             });
 
 
