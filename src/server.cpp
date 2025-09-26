@@ -560,7 +560,7 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
 
                         // re-lock and loop again (wait)
                         lk.lock();
-                    }// while
+                    } // while
                     return true;
                 }
             );
