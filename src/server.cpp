@@ -5,22 +5,24 @@
     #include <cmath>   // for std::ceil vimp forgot add it last time i'm dum dum 
     #include <condition_variable>
     #include <atomic>
+    #include<mutex> //for th
+    #include<vector>
 
-
-// Simple monitor structure
+// monitor struct
 struct Monitor {
     int id;
-    int src, dst;
-    int threshold_minutes;
+    int src;
+    int dst;
+    int threshold_minutes; // alert when adjusted ETA - baseline ETA >= threshold
     long long created_at;
 };
-static std::mutex g_mon_mutex;
+static std::mutex g_monitors_mutex;
 static std::vector<Monitor> g_monitors;
 static int g_next_monitor_id = 1;
-
-static std::mutex g_events_mutex;
-static std::condition_variable g_events_cv;
-static std::atomic<bool> g_events_flag{ false };
+    
+    static std::mutex g_events_mutex;
+    static std::condition_variable g_events_cv;
+    static std::atomic<bool> g_events_flag{ false };
 
 Store STORE;
 
@@ -37,7 +39,41 @@ Graph build_demo_graph() {
     g.n = 6;
     return g;
 }
+// made it global might need it late for other purposes
+nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
+    Graph baseline = GRAPH;
+    Graph adjusted = GRAPH;
 
+    auto incidents = STORE.get_incidents_copy();
+
+    for (const auto& inc : incidents) {
+        int node = inc.node_or_edge;
+        double multiplier = (inc.severity <= 1) ? 1.5 : (inc.severity == 2 ? 2.2 : 3.0);
+
+        if (node >= 0 && node < adjusted.n) {
+            for (auto& e : adjusted.adj[node])
+                e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+
+            for (int u = 0; u < adjusted.n; ++u)
+                for (auto& e : adjusted.adj[u])
+                    if (e.to == node)
+                        e.w = static_cast<long long>(std::ceil(e.w * multiplier));
+        }
+    }
+
+    auto res_base = dijkstra(baseline, src);
+    auto path_base = recover_path(res_base, src, dst);
+    long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
+
+    auto res_adj = dijkstra(adjusted, src);
+    auto path_adj = recover_path(res_adj, src, dst);
+    long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
+
+    nlohmann::json r;
+    r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
+    r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
+    return r;
+}
 
     void run_server(int port) {
         httplib::Server svr;
@@ -76,25 +112,26 @@ Graph build_demo_graph() {
             });
 
         // POST /monitor { "src":0, "dst":5, "threshold": 3 }
-
-    // POST /monitor
-        svr.Post("/monitor", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+        svr.Post("/monitor", [&set_cors, &GRAPH](const httplib::Request& req, httplib::Response& res) {
             set_cors(res);
             try {
                 auto body = nlohmann::json::parse(req.body);
-                int src = body.value("src", 0);
-                int dst = body.value("dst", 0);
-                int threshold = body.value("threshold", 3);
                 Monitor m;
-                m.id = g_next_monitor_id++;
-                m.src = src;
-                m.dst = dst;
-                m.threshold_minutes = threshold;
+                m.src = body.value("src", 0);
+                m.dst = body.value("dst", 0);
+                m.threshold_minutes = body.value("threshold", 3);
                 m.created_at = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
                 {
-                    std::lock_guard<std::mutex> lg(g_mon_mutex);
+                    std::lock_guard<std::mutex> lk(g_monitors_mutex);
+                    m.id = g_next_monitor_id++;
                     g_monitors.push_back(m);
                 }
+
+                // signal SSE clients (they'll evaluate monitors on next tick)
+                g_events_flag.store(true);
+                g_events_cv.notify_all();
+
                 res.set_content(nlohmann::json({ {"monitor_id", m.id} }).dump(), "application/json");
             }
             catch (const std::exception& e) {
@@ -103,20 +140,18 @@ Graph build_demo_graph() {
             }
             });
 
-        // GET /monitors
+        // --- GET /monitors (unchanged, safe copy) ---
         svr.Get("/monitors", [&set_cors](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
             nlohmann::json arr = nlohmann::json::array();
             {
-                std::lock_guard<std::mutex> lk(g_mon_mutex);
-                for (auto& m : g_monitors) {
+                std::lock_guard<std::mutex> lk(g_monitors_mutex);
+                for (const auto& m : g_monitors) {
                     arr.push_back({ {"id", m.id}, {"src", m.src}, {"dst", m.dst}, {"threshold", m.threshold_minutes}, {"created_at", m.created_at} });
                 }
             }
             res.set_content(arr.dump(), "application/json");
             });
-
-
 
         // ----------- Handlers ------------
 
@@ -226,46 +261,22 @@ Graph build_demo_graph() {
                     return;
                 }
 
-                Graph baseline = GRAPH;
-                Graph adjusted = GRAPH;
+                // use helper to compute both baseline and adjusted results
+                auto pair = compute_route_pair(GRAPH, src, dst);
 
-                const double INCIDENT_WEIGHT_MULTIPLIER = 2.0;
+                long long eta_base = pair["baseline"]["eta_minutes"].get<long long>();
+                long long eta_adj = pair["adjusted"]["eta_minutes"].get<long long>();
+                auto path_base = pair["baseline"]["path"].get<std::vector<int>>();
+                auto path_adj = pair["adjusted"]["path"].get<std::vector<int>>();
 
-                auto incidents = STORE.get_incidents_copy();
-                // for each incident:
-                for (const auto& inc : incidents) {
-                    int node = inc.node_or_edge;
-                    int severity = inc.severity;
-                    double multiplier = 1.0;
-                    if (severity <= 1) multiplier = 1.5;      // minor : 1.5x
-                    else if (severity == 2) multiplier = 2.2; // moderate : 2.2x
-                    else multiplier = 3.0;                   // major : 3x
-
-                    // increase outgoing
-                    for (auto& e : adjusted.adj[node]) {
-                        e.w = static_cast<long long>(std::ceil(e.w * multiplier));
-                    }
-                    // increase incoming
-                    for (int u = 0; u < adjusted.n; ++u) {
-                        for (auto& e : adjusted.adj[u]) {
-                            if (e.to == node) e.w = static_cast<long long>(std::ceil(e.w * multiplier));
-                        }
-                    }
-                }
+                // notify SSE watchers that route/incidents may have changed
                 g_events_flag.store(true);
                 g_events_cv.notify_all();
 
-
-                auto res_base = dijkstra(baseline, src);
-                auto path_base = recover_path(res_base, src, dst);
-                long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
-
-                auto res_adj = dijkstra(adjusted, src);
-                auto path_adj = recover_path(res_adj, src, dst);
-                long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
-
+                // keep your DNA logging if you want to record impacts
                 if (eta_base >= 0 && eta_adj >= 0 && eta_adj > eta_base) {
                     long long diff = eta_adj - eta_base;
+                    auto incidents = STORE.get_incidents_copy();
                     if (!incidents.empty()) {
                         DNA.logIncidentImpact(
                             incidents[0].node_or_edge,
@@ -274,6 +285,7 @@ Graph build_demo_graph() {
                         );
                     }
                 }
+
 
                 nlohmann::json r;
                 r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
@@ -315,7 +327,7 @@ Graph build_demo_graph() {
                 int threshold = body.value("threshold", 3);
                 Monitor m; m.id = g_next_monitor_id++; m.src = src; m.dst = dst; m.threshold_minutes = threshold;
                 {
-                    std::lock_guard<std::mutex> lg(g_mon_mutex);
+                    std::lock_guard<std::mutex> lg(g_monitors_mutex);
                     g_monitors.push_back(m);
                 }
                 nlohmann::json r = { {"monitor_id", m.id} };
@@ -399,76 +411,156 @@ Graph build_demo_graph() {
 
 
 
-        // GET /events  (Server-Sent Events)
-      // GET /events  (Server-Sent Events)
+        // --- GET /events SSE (cleaned) ---
         svr.Get("/events", [&set_cors, &GRAPH](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
             res.set_header("Content-Type", "text/event-stream");
             res.set_header("Cache-Control", "no-cache");
             res.set_header("Connection", "keep-alive");
 
+            // last incidents string used to avoid re-sending identical payloads
+            std::string last_incidents_str;
+
             res.set_chunked_content_provider(
                 "text/event-stream",
-                [&GRAPH](size_t /*offset*/, httplib::DataSink& sink) {
+                [&GRAPH, &last_incidents_str](size_t /*offset*/, httplib::DataSink& sink) {
                     // send initial greeting
                     std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
                     sink.write(init.c_str(), init.size());
 
                     std::unique_lock<std::mutex> lk(g_events_mutex);
-                    auto compute_route_pair = [&GRAPH](int src, int dst) -> nlohmann::json {
-                        Graph baseline = GRAPH;
-                        Graph adjusted = GRAPH;
-                        auto incidents = STORE.get_incidents_copy();
 
-                        for (const auto& inc : incidents) {
-                            int node = inc.node_or_edge;
-                            double multiplier = (inc.severity <= 1) ? 1.5 : (inc.severity == 2 ? 2.2 : 3.0);
-
-                            for (auto& e : adjusted.adj[node])
-                                e.w = static_cast<long long>(std::ceil(e.w * multiplier));
-
-                            for (int u = 0; u < adjusted.n; ++u)
-                                for (auto& e : adjusted.adj[u])
-                                    if (e.to == node)
-                                        e.w = static_cast<long long>(std::ceil(e.w * multiplier));
-                        }
-
-                        auto res_base = dijkstra(baseline, src);
-                        auto path_base = recover_path(res_base, src, dst);
-                        long long eta_base = (res_base.dist[dst] == INF) ? -1 : res_base.dist[dst];
-
-                        auto res_adj = dijkstra(adjusted, src);
-                        auto path_adj = recover_path(res_adj, src, dst);
-                        long long eta_adj = (res_adj.dist[dst] == INF) ? -1 : res_adj.dist[dst];
-
-                        nlohmann::json r;
-                        r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
-                        r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
-                        return r;
-                        };
+                    // heartbeat counter (keeps heart local to lambda)
+                    int heartbeat_counter = 0;
 
                     while (sink.is_writable()) {
+                        // Wait until notified or timeout (keeps connection alive)
                         g_events_cv.wait_for(lk, std::chrono::seconds(2));
 
-                        nlohmann::json j;
-                        j["incidents"] = STORE.list_incidents();
+                        // Release the g_events_mutex quickly — do not hold while calling STORE/DNA/compute
+                        lk.unlock();
 
-                        // Optional: DNA summary
-                        try { j["dna_summary"] = nlohmann::json::parse(DNA.exportSummaryJSON()); }
-                        catch (...) { j["dna_summary"] = nlohmann::json::object(); }
+                        try {
+                            // 1) Get a safe copy of incidents (STORE should return by value)
+                            nlohmann::json incidents_json;
+                            try {
+                                incidents_json = STORE.list_incidents(); // MUST return by value and be thread-safe
+                            }
+                            catch (...) {
+                                incidents_json = nlohmann::json::array();
+                            }
+                            const std::string incidents_str = incidents_json.dump();
 
-                        // Alerts for monitors
-                        std::vector<Monitor> monitors_copy;
-                        {
-                            std::lock_guard<std::mutex> lg(g_mon_mutex); // correct mutex
-                            monitors_copy = g_monitors;
+                            // 2) Build payload JSON locally
+                            nlohmann::json payload;
+                            payload["incidents"] = incidents_json;
+
+                            // Add DNA summary safely (assume exportSummaryJSON returns a string)
+                            try {
+                                auto dna_json_str = DNA.exportSummaryJSON(); // must be thread-safe
+                                if (!dna_json_str.empty()) {
+                                    payload["dna_summary"] = nlohmann::json::parse(dna_json_str);
+                                }
+                                else {
+                                    payload["dna_summary"] = nlohmann::json::object();
+                                }
+                            }
+                            catch (...) {
+                                payload["dna_summary"] = nlohmann::json::object();
+                            }
+
+                            // 3) Evaluate monitors using copies (avoid long locks)
+                            std::vector<Monitor> monitors_copy;
+                            {
+                                std::lock_guard<std::mutex> lg(g_monitors_mutex);
+                                monitors_copy = g_monitors; // copy under monitor mutex
+                            }
+
+                            if (!monitors_copy.empty()) {
+                                nlohmann::json alerts = nlohmann::json::array();
+
+                                const long long ADD_PENALTY_MINOR = 2;
+                                const long long ADD_PENALTY_MODERATE = 5;
+                                const long long ADD_PENALTY_MAJOR = 10;
+
+                                for (const auto& m : monitors_copy) {
+                                    if (m.src < 0 || m.dst < 0 || m.src >= GRAPH.n || m.dst >= GRAPH.n) continue;
+
+                                    // Use a local snapshot of the graph (copy)
+                                    Graph baseline = GRAPH;
+                                    Graph adjusted = GRAPH;
+
+                                    // apply additive penalties per current incidents
+                                    auto incs = STORE.get_incidents_copy(); // must be thread-safe and return copy
+                                    for (const auto& inc : incs) {
+                                        int node = inc.node_or_edge;
+                                        if (node < 0 || node >= adjusted.n) continue;
+                                        long long add = (inc.severity <= 1) ? ADD_PENALTY_MINOR :
+                                            (inc.severity == 2) ? ADD_PENALTY_MODERATE : ADD_PENALTY_MAJOR;
+                                        for (auto& e : adjusted.adj[node]) e.w += add;
+                                        for (int u = 0; u < adjusted.n; ++u)
+                                            for (auto& e : adjusted.adj[u])
+                                                if (e.to == node) e.w += add;
+                                    }
+
+                                    // compute routes (using local graphs)
+                                    auto rb = dijkstra(baseline, m.src);
+                                    auto path_b = recover_path(rb, m.src, m.dst);
+                                    long long eta_b = (rb.dist[m.dst] == INF) ? -1 : rb.dist[m.dst];
+
+                                    auto ra = dijkstra(adjusted, m.src);
+                                    auto path_a = recover_path(ra, m.src, m.dst);
+                                    long long eta_a = (ra.dist[m.dst] == INF) ? -1 : ra.dist[m.dst];
+
+                                    if (eta_b >= 0 && eta_a >= 0) {
+                                        long long delta = eta_a - eta_b;
+                                        if (delta >= m.threshold_minutes) {
+                                            alerts.push_back({
+                                                {"monitor_id", m.id},
+                                                {"src", m.src},
+                                                {"dst", m.dst},
+                                                {"eta_base", eta_b},
+                                                {"eta_adj", eta_a},
+                                                {"delta", delta},
+                                                {"timestamp", (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
+                                                });
+                                        }
+                                    }
+                                } // for monitors
+
+                                if (!alerts.empty()) payload["monitor_alerts"] = alerts;
+                            } // if monitors
+
+                            // 4) Decide whether to send (last_incidents_str is local per-connection so safe)
+                            if (incidents_str != last_incidents_str) {
+                                last_incidents_str = incidents_str;
+                                const std::string msg = "data: " + payload.dump() + "\n\n";
+                                if (!sink.is_writable()) break;
+                                if (!sink.write(msg.c_str(), msg.size())) break;
+                                heartbeat_counter = 0;
+                            }
+                            else {
+                                // heartbeat roughly every 5 cycles (~10s)
+                                if (++heartbeat_counter % 5 == 0) {
+                                    const std::string hk = "data: {\"heartbeat\":true}\n\n";
+                                    if (!sink.is_writable()) break;
+                                    if (!sink.write(hk.c_str(), hk.size())) break;
+                                }
+                            }
+                        }
+                        catch (const std::exception& ex) {
+                            // send error message but don't rethrow
+                            try {
+                                const std::string err = std::string("data: ") + nlohmann::json({ {"error", ex.what()} }).dump() + "\n\n";
+                                if (sink.is_writable()) sink.write(err.c_str(), err.size());
+                            }
+                            catch (...) {}
+                            break;
                         }
 
-
-                        std::string msg = "data: " + j.dump() + "\n\n";
-                        if (!sink.is_writable()) break;
-                        sink.write(msg.c_str(), msg.size());
-                    }
+                        // re-lock and loop again (wait)
+                        lk.lock();
+                    }// while
                     return true;
                 }
             );

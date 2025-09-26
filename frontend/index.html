@@ -74,6 +74,12 @@
             <button id="monitorBtn" class="btn">Monitor this route (threshold: <input id="monitorThreshold" type="number" value="3" min="1" style="width:60px"> min)</button>
 
         </div>
+        <div style="margin-top:8px">
+            <strong>Persona</strong><br />
+            <input id="personaName" placeholder="Name" style="width:100px" />
+            <button id="personaPredictBtn">Predict for Persona</button>
+            <div id="dnaPanel" style="margin-top:6px;font-size:13px"></div>
+        </div>
         <hr />
         <div>
             <label>Report Node: <input id="rnode" type="number" value="1" min="0" max="5" style="width:70px" /></label>
@@ -470,6 +476,28 @@
 
         document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
 
+        document.getElementById('personaPredictBtn').addEventListener('click', async () => {
+            const src = Number(document.getElementById('src').value);
+            const dst = Number(document.getElementById('dst').value);
+            const persona = { name: document.getElementById('personaName').value || 'Persona' };
+            try {
+                const r = await fetch(API + '/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ src, dst, persona })
+                });
+                const j = await r.json();
+                pushLogLine(`Persona predicted extra: ${j.dna_predicted_extra_minutes} min`, 1);
+                // Optionally, update the ETA display with predicted extra
+                const cur = document.getElementById('eta-current').innerText;
+                // show predicted addition in dnaPanel
+                const panel = document.getElementById('dnaPanel');
+                if (panel) panel.innerHTML = (panel.innerHTML || '') + `<div style="margin-top:6px">Persona: +${j.dna_predicted_extra_minutes} min</div>`;
+            } catch (e) {
+                pushLogLine('predict error: ' + e.message, 1);
+            }
+        });
+
         // monitor button handler
         document.getElementById('monitorBtn').addEventListener('click', async () => {
             const src = Number(document.getElementById('src').value);
@@ -523,17 +551,59 @@
                 evt.onmessage = function (ev) {
                     try {
                         const data = JSON.parse(ev.data);
+
+                        // === Existing incident handling ===
                         const list = data.incidents || [];
-                        // avoid updating if identical (handled inside renderIncidentsIncremental too)
-                        const serialized = JSON.stringify(list.map(i => ({ id: i.id, node: i.node_or_edge, sev: i.severity, expires: i.expires_at })));
+                        const serialized = JSON.stringify(list.map(i => ({
+                            id: i.id,
+                            node: i.node_or_edge,
+                            sev: i.severity,
+                            expires: i.expires_at
+                        })));
                         if (serialized !== _lastIncidentsSerialized) {
                             _lastIncidentsSerialized = serialized;
                             renderIncidentsIncremental(list);
                         }
+
+                        // === NEW: DNA summary panel ===
+                        if (data.dna_summary) {
+                            try {
+                                const dna = data.dna_summary;
+                                const stats = dna.node_stats || {};
+                                let html = '<strong>TransitDNA</strong><br/>';
+                                const keys = Object.keys(stats)
+                                    .sort((a, b) => (stats[b].avg_delay || 0) - (stats[a].avg_delay || 0))
+                                    .slice(0, 3);
+                                keys.forEach(k => {
+                                    const s = stats[k];
+                                    html += `Node ${k}: ${Math.round((s.avg_delay || 0))}m (n=${s.count || 0})<br/>`;
+                                });
+                                const el = document.getElementById('dnaPanel');
+                                if (el) el.innerHTML = html;
+                            } catch (e) { console.error('dna render err', e); }
+                        }
+
+                        // === NEW: Monitor alerts ===
+                        if (data.monitor_alerts && data.monitor_alerts.length) {
+                            data.monitor_alerts.forEach(a => {
+                                const text = `[ALERT] route ${a.src}->${a.dst} delayed by ${a.delta} min (eta ${a.eta_adj} vs baseline ${a.eta_base})`;
+                                pushLogLine(text, 3);
+                                setStatus("ALERT: " + text);
+                                if (window.currentPathLines && window.currentPathLines.adjustedLine) {
+                                    window.currentPathLines.adjustedLine.setStyle({ color: '#ff0000', weight: 6 });
+                                    setTimeout(() => {
+                                        if (window.currentPathLines.adjustedLine)
+                                            window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 });
+                                    }, 4000);
+                                }
+                            });
+                        }
+
                     } catch (err) {
                         console.error("SSE parse error", err, ev.data);
                     }
                 };
+
                 evt.onerror = (err) => {
                     console.error("SSE error", err);
                     pushLogLine(`[${new Date().toLocaleTimeString()}] SSE connection error — reconnecting...`, 1);
