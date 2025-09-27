@@ -112,6 +112,17 @@
   font-family: sans-serif; font-size:14px; z-index:1000; display:flex;
   gap:12px; align-items:center; justify-content:space-between;
 ">
+        <!-- Left side -->
+        <span id="status-message">Status: Ready</span>
+
+        <!-- Right side -->
+        <div>
+            ETA:
+            <span id="eta-baseline">-</span> →
+            <span id="eta-current">-</span> (DNA:
+            <span id="eta-dna">-</span>)
+        </div>
+    </div>
         <div>
             <strong id="sb-title">Status:</strong>
             <span id="sb-text">Waiting for route...</span>
@@ -148,6 +159,17 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+
+        // --- UI Helper ---
+        function safeSetText(id, text) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerText = text;
+            } else {
+                console.warn("safeSetText: missing element #" + id);
+            }
+        }
+
         /* =========================
            Configuration
            ========================= */
@@ -195,12 +217,11 @@
         /* =========================
            UI helpers
            ========================= */
-        function setStatus(s) {
-            const statusDiv = document.getElementById('status');
-            if (statusDiv) statusDiv.innerText = s;
-            const bar = document.getElementById('status-bar');
-            if (bar) bar.innerText = "Status: " + s;
+        function setStatus(text) {
+            // Only update the dedicated span inside the status bar
+            safeSetText('status-message', "Status: " + text);
         }
+
 
         /* Route drawing: keep references to lines and update in-place for smoothness */
         window.currentPathLines = window.currentPathLines || { baselineLine: null, adjustedLine: null };
@@ -391,14 +412,11 @@
                     const savedTextSafe = savedText || '';
 
                     // status bar fields
-                    const etaBaseEl = document.getElementById('eta-baseline');
-                    const etaCurEl = document.getElementById('eta-current');
-                    const etaRecEl = document.getElementById('eta-rec');
-                    const etaSavedEl = document.getElementById('eta-saved');
-                    if (etaBaseEl) etaBaseEl.innerText = baseText;
-                    if (etaCurEl) etaCurEl.innerText = adjText;
-                    if (etaRecEl) etaRecEl.innerText = recTextSafe;
-                    if (etaSavedEl) etaSavedEl.innerText = savedTextSafe;
+                    safeSetText('eta-baseline', baseText);
+                    safeSetText('eta-current', adjText);
+                    safeSetText('eta-rec', recTextSafe);
+                    safeSetText('eta-saved', savedTextSafe);
+
 
                     // status line
                     setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText}`);
@@ -476,27 +494,63 @@
 
         document.getElementById('refreshBtn').addEventListener('click', fetchIncidents);
 
+        // Safe persona predict handler (replace your existing handler with this)
         document.getElementById('personaPredictBtn').addEventListener('click', async () => {
             const src = Number(document.getElementById('src').value);
             const dst = Number(document.getElementById('dst').value);
-            const persona = { name: document.getElementById('personaName').value || 'Persona' };
+            const personaName = (document.getElementById('personaName') && document.getElementById('personaName').value) || 'Persona';
+            const persona = { name: personaName };
+
             try {
-                const r = await fetch(API + '/predict', {
+                const resp = await fetch(API + '/predict', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ src, dst, persona })
                 });
-                const j = await r.json();
-                pushLogLine(`Persona predicted extra: ${j.dna_predicted_extra_minutes} min`, 1);
-                // Optionally, update the ETA display with predicted extra
-                const cur = document.getElementById('eta-current').innerText;
-                // show predicted addition in dnaPanel
+
+                if (!resp.ok) {
+                    const text = await resp.text().catch(() => '');
+                    pushLogLine(`predict failed: HTTP ${resp.status} ${text}`, 2);
+                    return;
+                }
+
+                const j = await resp.json();
+                // defensive extracts
+                const predicted = (typeof j.dna_predicted_extra_minutes === 'number') ? j.dna_predicted_extra_minutes : Number(j.dna_predicted_extra_minutes) || 0;
+
+                pushLogLine(`Persona "${personaName}" predicted extra: ${predicted} min`, 1);
+
+                // Update dnaPanel safely
                 const panel = document.getElementById('dnaPanel');
-                if (panel) panel.innerHTML = (panel.innerHTML || '') + `<div style="margin-top:6px">Persona: +${j.dna_predicted_extra_minutes} min</div>`;
-            } catch (e) {
-                pushLogLine('predict error: ' + e.message, 1);
+                if (panel) {
+                    // create small block for this persona
+                    const el = document.createElement('div');
+                    el.style.marginTop = '6px';
+                    el.textContent = `${personaName}: +${predicted} min — ${j.dna_message || ''}`;
+                    panel.appendChild(el);
+                } else {
+                    console.warn('dnaPanel not found in DOM.');
+                }
+
+                // Update ETA display only if the element exists (guarded)
+                const etaCurEl = document.getElementById('eta-current');
+                if (etaCurEl) {
+                    // we purposely don't overwrite the current ETA with predicted — instead show appended note
+                    const note = ` (+${predicted}m predicted)`;
+                    // avoid blowing up if innerText is missing
+                    const baseText = etaCurEl.innerText || etaCurEl.textContent || '';
+                    etaCurEl.innerText = baseText + note;
+                } else {
+                    console.warn('eta-current element missing; skipping ETA update.');
+                }
+
+            } catch (err) {
+                // more informative error log
+                pushLogLine('predict error: ' + (err && err.message ? err.message : String(err)), 2);
+                console.error('predict handler error (full):', err);
             }
         });
+
 
         // monitor button handler
         document.getElementById('monitorBtn').addEventListener('click', async () => {

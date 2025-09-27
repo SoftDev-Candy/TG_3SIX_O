@@ -314,28 +314,13 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
 
         svr.Get("/dna", [&set_cors](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
-            res.set_content(DNA.exportSummaryJSON(), "application/json");
-            });
-
-        // New endpoint to register monitor
-        svr.Post("/monitor", [&set_cors](const httplib::Request& req, httplib::Response& res) {
-            set_cors(res);
             try {
-                auto body = nlohmann::json::parse(req.body);
-                int src = body.value("src", 0);
-                int dst = body.value("dst", 0);
-                int threshold = body.value("threshold", 3);
-                Monitor m; m.id = g_next_monitor_id++; m.src = src; m.dst = dst; m.threshold_minutes = threshold;
-                {
-                    std::lock_guard<std::mutex> lg(g_monitors_mutex);
-                    g_monitors.push_back(m);
-                }
-                nlohmann::json r = { {"monitor_id", m.id} };
-                res.set_content(r.dump(), "application/json");
+                auto s = DNA.exportSummaryJSON();
+                if (s.empty() || s == "null") s = "{}";
+                res.set_content(s, "application/json");
             }
-            catch (const std::exception& e) {
-                res.status = 400;
-                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            catch (...) {
+                res.set_content("{}", "application/json");
             }
             });
 
@@ -396,6 +381,25 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 }
                 catch (...) { dna_pred = 0.0; }
 
+                // Debug/logging for predict
+                try {
+                    auto incs_json = STORE.list_incidents();
+                    size_t inc_count = incs_json.is_array() ? inc_count = incs_json.size() : 0;
+                    std::cout << "[PREDICT] src=" << src
+                        << " dst=" << dst
+                        << " eta_base=" << eta_base
+                        << " eta_adj=" << eta_adj
+                        << " dna_pred=" << dna_pred
+                        << " incidents=" << inc_count
+                        << std::endl;
+                }
+                catch (...) {
+                    std::cout << "[PREDICT] src=" << src << " dst=" << dst
+                        << " eta_base=" << eta_base << " eta_adj=" << eta_adj
+                        << " dna_pred=" << dna_pred << " incidents=?" << std::endl;
+                }
+
+
                 nlohmann::json r;
                 r["baseline"] = pair["baseline"];
                 r["adjusted"] = pair["adjusted"];
@@ -423,11 +427,12 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
 
             res.set_chunked_content_provider(
                 "text/event-stream",
-                [&GRAPH, &last_incidents_str](size_t /*offset*/, httplib::DataSink& sink) {
-                    // send initial greeting
+                [&GRAPH, last_incidents_str = std::string()](size_t /*offset*/, httplib::DataSink& sink) mutable -> bool {
+                   // send initial greeting (check writability)
                     std::string init = "event: connected\ndata: {\"status\":\"ok\"}\n\n";
-                    sink.write(init.c_str(), init.size());
-
+                    if (!sink.is_writable() || !sink.write(init.c_str(), init.size())) {
+                        return false;
+                    }
                     std::unique_lock<std::mutex> lk(g_events_mutex);
 
                     // heartbeat counter (keeps heart local to lambda)

@@ -24,14 +24,24 @@ struct Incident {
     long long expires_at = 0;    // epoch when this incident should be removed (0 = never)
 };
 
+// Helper for consistent JSON conversion
+nlohmann::json to_json(const Incident& inc);
+
 class Store {
 public:
     Store();
     int add_trip(const Trip& t);
     int add_incident(const Incident& inc);
-    nlohmann::json list_incidents(); // returns only active (non-expired) incidents as json
-    std::vector<Incident> get_incidents_copy(); // active copy
-    void remove_expired(); // purge expired incidents
+
+    // Returns only active (non-expired) incidents as JSON array (by value, thread-safe).
+    nlohmann::json list_incidents();
+
+    // Returns safe vector copy of active incidents.
+    std::vector<Incident> get_incidents_copy();
+
+    // Purges expired incidents from storage (thread-safe).
+    void remove_expired();
+
 private:
     std::mutex mutex_;
     int nextTrip_;

@@ -13,6 +13,15 @@ void TransitDNA::logIncidentImpact(int node_or_edge, int severity, long long del
     }
 }
 
+static nlohmann::json to_json(const DNARecord& r) {
+    return {
+        {"node_or_edge", r.node_or_edge},
+        {"severity", r.severity},
+        {"observed_delay", r.observed_delay},
+        {"timestamp", r.timestamp}
+    };
+}
+
 long long TransitDNA::predictDelay(int node_or_edge, int severity) {
     std::lock_guard<std::mutex> lock(mtx);
     auto it = delayBuckets.find({ node_or_edge, severity });
@@ -42,7 +51,12 @@ std::string TransitDNA::exportSummaryJSON() {
         int sev = key.second;
         if (!delays.empty()) {
             long long avg = std::accumulate(delays.begin(), delays.end(), 0LL) / delays.size();
-            j.push_back({ {"node", node}, {"severity", sev}, {"avg_delay", avg} });
+            j.push_back({
+                {"node", node},
+                {"severity", sev},
+                {"avg_delay", avg},
+                {"samples", delays.size()}
+                });
         }
     }
     return j.dump();
@@ -50,12 +64,20 @@ std::string TransitDNA::exportSummaryJSON() {
 
 double TransitDNA::predict_delay_for_path(const std::vector<int>& path)
 {
-    // Simple stub: just return 0 for now
-    return 0.0;
+    std::lock_guard<std::mutex> lock(mtx);
+    double total = 0.0;
+    for (int node : path) {
+        // take worst-case severity = 2 (moderate) for now
+        total += predictDelay(node, 2);
+    }
+    return total;
+
 }
 
 std::string TransitDNA::summary_short()
 {
-    // Simple stub: return "ok" for now
-    return "ok";
+    std::lock_guard<std::mutex> lock(mtx);
+    return "DNA rules=" + std::to_string(delayBuckets.size()) +
+        ", history=" + std::to_string(history.size());
 }
+
