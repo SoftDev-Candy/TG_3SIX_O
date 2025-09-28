@@ -417,6 +417,20 @@
                     safeSetText('eta-rec', recTextSafe);
                     safeSetText('eta-saved', savedTextSafe);
 
+                    // --- update DNA ETA display (if present) ---
+                    try {
+                        const dnaVal = (j && typeof j.dna_predicted_extra_minutes === 'number') ? Math.round(j.dna_predicted_extra_minutes) : null;
+                        if (dnaVal !== null) {
+                            safeSetText('eta-dna', dnaVal + 'm');
+                        } else {
+                            // fallback: if server supplied string message only
+                            if (j && j.dna_message) safeSetText('eta-dna', j.dna_message);
+                            else safeSetText('eta-dna', '—');
+                        }
+                    } catch (e) {
+                        console.warn('dna display update failed', e);
+                        safeSetText('eta-dna', '—');
+                    }
 
                     // status line
                     setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText}`);

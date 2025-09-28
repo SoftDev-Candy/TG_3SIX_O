@@ -64,15 +64,30 @@ std::string TransitDNA::exportSummaryJSON() {
 
 double TransitDNA::predict_delay_for_path(const std::vector<int>& path)
 {
+    // Conservative estimate: for each node in the path, take the worst
+    // (max) predicted delay across severities 1..3, then sum them.
     std::lock_guard<std::mutex> lock(mtx);
     double total = 0.0;
-    for (int node : path) {
-        // take worst-case severity = 2 (moderate) for now
-        total += predictDelay(node, 2);
-    }
-    return total;
 
+    for (int node : path) {
+        if (node < 0) continue;
+        long long best = 0;
+        // check all severities and take max observed moving average
+        for (int sev = 1; sev <= 3; ++sev) {
+            auto it = delayBuckets.find({ node, sev });
+            if (it == delayBuckets.end() || it->second.empty()) continue;
+            // compute average for this bucket (integer division OK here)
+            long long sum = 0;
+            for (auto d : it->second) sum += d;
+            long long avg = sum / static_cast<long long>(it->second.size());
+            if (avg > best) best = avg;
+        }
+        total += static_cast<double>(best);
+    }
+
+    return total; // minutes (double)
 }
+
 
 std::string TransitDNA::summary_short()
 {

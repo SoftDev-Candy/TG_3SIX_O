@@ -8,6 +8,8 @@
     #include<mutex> //for th
     #include<vector>
 
+
+
 // monitor struct
 struct Monitor {
     int id;
@@ -285,10 +287,30 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                         );
                     }
                 }
-
+                                // --- DNA prediction (safe) ---
+                double dna_pred = 0.0;
+                try {
+                    // use baseline path as canonical representative for persona prediction
+                    auto path_for_dna = path_base;
+                    // if baseline path empty, try adjusted path
+                    if (path_for_dna.empty()) path_for_dna = path_adj;
+                    if (!path_for_dna.empty()) {
+                        dna_pred = DNA.predict_delay_for_path(path_for_dna);
+                    } else {
+                        dna_pred = 0.0;
+                    }
+                } catch (const std::exception& ex) {
+                    std::cerr << "[route] DNA predict exception: " << ex.what() << "\n";
+                    dna_pred = 0.0;
+                } catch (...) {
+                    dna_pred = 0.0;
+                }
 
                 nlohmann::json r;
                 r["baseline"] = { {"path", path_base}, {"eta_minutes", eta_base} };
+                // attach DNA info for clients
+                r["dna_predicted_extra_minutes"] = dna_pred;
+                r["dna_message"] = DNA.summary_short();
                 r["adjusted"] = { {"path", path_adj}, {"eta_minutes", eta_adj} };
                 if (eta_base >= 0 && eta_adj >= 0) {
                     if (eta_adj > eta_base) r["recommendation"] = "baseline_faster";
@@ -460,19 +482,86 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                             nlohmann::json payload;
                             payload["incidents"] = incidents_json;
 
-                            // Add DNA summary safely (assume exportSummaryJSON returns a string)
+                            // Add DNA summary safely (normalize to { node_stats: { node: { avg_delay, count } } })
+                                                        // Add DNA summary safely (normalize to { node_stats: { node: { avg_delay, count } } })
                             try {
                                 auto dna_json_str = DNA.exportSummaryJSON(); // must be thread-safe
-                                if (!dna_json_str.empty()) {
-                                    payload["dna_summary"] = nlohmann::json::parse(dna_json_str);
+                                nlohmann::json dna_out = nlohmann::json::object();
+
+                                if (dna_json_str.empty() || dna_json_str == "null") {
+                                    dna_out["node_stats"] = nlohmann::json::object();
                                 }
                                 else {
-                                    payload["dna_summary"] = nlohmann::json::object();
+                                    auto parsed = nlohmann::json::parse(dna_json_str);
+                                    // If parsed is an array of {node, severity, avg_delay, samples}
+                                    if (parsed.is_array()) {
+                                        nlohmann::json node_stats = nlohmann::json::object();
+                                        for (auto& item : parsed) {
+                                            try {
+                                                int node = item.value("node", -1);
+                                                double avg = item.value("avg_delay", 0.0);
+                                                int samples = item.value("samples", 0);
+                                                if (node < 0) continue;
+                                                std::string key = std::to_string(node);
+
+                                                // ensure object exists
+                                                if (!node_stats.contains(key) || !node_stats[key].is_object()) {
+                                                    node_stats[key] = nlohmann::json::object();
+                                                    node_stats[key]["avg_delay"] = 0.0;
+                                                    node_stats[key]["count"] = 0;
+                                                }
+
+                                                double prev_avg = node_stats[key].value("avg_delay", 0.0);
+                                                int prev_count = node_stats[key].value("count", 0);
+
+                                                // aggregate: keep the maximum average delay seen across severities,
+                                                // and sum samples as a simple count.
+                                                double new_avg = std::max(prev_avg, avg);
+                                                int new_count = prev_count + samples;
+
+                                                node_stats[key]["avg_delay"] = new_avg;
+                                                node_stats[key]["count"] = new_count;
+                                            }
+                                            catch (...) { /* ignore bad items */ }
+                                        }
+                                        dna_out["node_stats"] = node_stats;
+                                    }
+                                    // If parsed is an object and already contains node_stats, use it directly
+                                    else if (parsed.is_object() && parsed.contains("node_stats")) {
+                                        // normalize to our preferred shape (ensure node entries are objects)
+                                        nlohmann::json node_stats = nlohmann::json::object();
+                                        for (auto it = parsed["node_stats"].begin(); it != parsed["node_stats"].end(); ++it) {
+                                            const std::string key = it.key();
+                                            auto val = it.value();
+                                            if (val.is_object()) {
+                                                double avg = val.value("avg_delay", 0.0);
+                                                int cnt = val.value("count", 0);
+                                                node_stats[key] = nlohmann::json::object();
+                                                node_stats[key]["avg_delay"] = avg;
+                                                node_stats[key]["count"] = cnt;
+                                            }
+                                            else {
+                                                // if value isn't object, skip or set defaults
+                                                node_stats[key] = nlohmann::json::object();
+                                                node_stats[key]["avg_delay"] = 0.0;
+                                                node_stats[key]["count"] = 0;
+                                            }
+                                        }
+                                        dna_out["node_stats"] = node_stats;
+                                    }
+                                    // otherwise return the parsed object under "raw" and provide empty node_stats
+                                    else {
+                                        dna_out["raw"] = parsed;
+                                        dna_out["node_stats"] = nlohmann::json::object();
+                                    }
                                 }
+                                payload["dna_summary"] = dna_out;
                             }
                             catch (...) {
                                 payload["dna_summary"] = nlohmann::json::object();
                             }
+
+
 
                             // 3) Evaluate monitors using copies (avoid long locks)
                             std::vector<Monitor> monitors_copy;
