@@ -8,7 +8,11 @@
     #include<mutex> //for th
     #include<vector>
 
-
+// ---------------- Calendar (in-memory, simple .ics parser) ----------------
+struct CalendarEvent {
+    long long start_epoch = 0; // epoch seconds UTC
+    std::string summary;
+};
 
 // monitor struct
 struct Monitor {
@@ -25,7 +29,49 @@ static int g_next_monitor_id = 1;
     static std::mutex g_events_mutex;
     static std::condition_variable g_events_cv;
     static std::atomic<bool> g_events_flag{ false };
+    
+    //For da Calenders 
+    static std::mutex g_calendar_mutex;
+    static std::vector<CalendarEvent> g_calendar_events;
 
+
+
+// Very small helper: parse a single DTSTART line like "DTSTART:20250930T090000Z" or "DTSTART:20250930T090000"
+static long long parse_ics_dtstart(const std::string& line) {
+    // find the colon
+    auto pos = line.find(':');
+    if (pos == std::string::npos) return 0;
+    std::string dt = line.substr(pos + 1);
+    // Accept YYYYMMDD or YYYYMMDDTHHMMSS or with trailing Z
+    // We'll parse YYYYMMDD[T]HHMM[SS] permissively.
+    std::tm tm{};
+    if (dt.size() < 8) return 0;
+    try {
+        int year = std::stoi(dt.substr(0, 4));
+        int month = std::stoi(dt.substr(4, 2));
+        int day = std::stoi(dt.substr(6, 2));
+        int hour = 0, min = 0, sec = 0;
+        if (dt.size() >= 15 && (dt[8] == 'T' || dt[8] == 't')) {
+            // e.g. YYYYMMDDTHHMMSS or YYYYMMDDTHHMM
+            hour = std::stoi(dt.substr(9, 2));
+            min = std::stoi(dt.substr(11, 2));
+            if (dt.size() >= 15) sec = std::stoi(dt.substr(13, 2));
+        }
+        tm.tm_year = year - 1900;
+        tm.tm_mon = month - 1;
+        tm.tm_mday = day;
+        tm.tm_hour = hour;
+        tm.tm_min = min;
+        tm.tm_sec = sec;
+        // treat as local time and convert to epoch (portable enough for demo)
+        return (long long)std::mktime(&tm);
+    }
+    catch (...) {
+        return 0;
+    }
+}
+
+//------------------------Store Object here---------------------//
 Store STORE;
 
 // Build demo graph
@@ -112,6 +158,10 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             res.set_header("Access-Control-Allow-Headers", "Content-Type");
             res.status = 200;
             });
+
+
+
+
 
         // POST /monitor { "src":0, "dst":5, "threshold": 3 }
         svr.Post("/monitor", [&set_cors, &GRAPH](const httplib::Request& req, httplib::Response& res) {
@@ -241,6 +291,65 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             }
             });
 
+        // POST /calendar  (body = raw .ics text)
+        svr.Post("/calendar", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                const std::string ics = req.body;
+                if (ics.empty()) {
+                    res.status = 400;
+                    res.set_content(nlohmann::json({ {"error","empty body"} }).dump(), "application/json");
+                    return;
+                }
+
+                // parse lines: collect events
+                std::istringstream iss(ics);
+                std::string line;
+                CalendarEvent cur;
+                bool inEvent = false;
+                std::vector<CalendarEvent> parsed;
+
+                while (std::getline(iss, line)) {
+                    // trim CR
+                    if (!line.empty() && line.back() == '\r') line.pop_back();
+
+                    if (line.rfind("BEGIN:VEVENT", 0) == 0) {
+                        inEvent = true;
+                        cur = CalendarEvent{};
+                    }
+                    else if (line.rfind("END:VEVENT", 0) == 0) {
+                        inEvent = false;
+                        if (cur.start_epoch != 0) parsed.push_back(cur);
+                    }
+                    else if (inEvent) {
+                        if (line.rfind("DTSTART", 0) == 0) {
+                            long long t = parse_ics_dtstart(line);
+                            if (t > 0) cur.start_epoch = t;
+                        }
+                        else if (line.rfind("SUMMARY", 0) == 0) {
+                            auto pos = line.find(':');
+                            if (pos != std::string::npos) cur.summary = line.substr(pos + 1);
+                        }
+                    }
+                }
+
+                // store parsed events (replace existing in-memory calendar)
+                {
+                    std::lock_guard<std::mutex> lg(g_calendar_mutex);
+                    g_calendar_events = parsed; // overwrite easy demo behavior
+                }
+
+                nlohmann::json out;
+                out["imported"] = (int)parsed.size();
+                res.set_content(out.dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 500;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+
         // GET /incidents
         svr.Get("/incidents", [&set_cors](const httplib::Request&, httplib::Response& res) {
             set_cors(res);
@@ -326,6 +435,48 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 else {
                     r["recommendation"] = "no_path";
                 }
+
+                // --- Calendar conflict check (simple) ---
+                try {
+                    bool conflict = false;
+                    std::string conflict_msg;
+                    auto now_ts = (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+                    // choose ETA to compare: use adjusted ETA if available else baseline
+                    long long eta_to_use = (eta_adj >= 0) ? eta_adj : eta_base;
+                    if (eta_to_use >= 0) {
+                        // compute arrival epoch (seconds)
+                        long long arrival_epoch = now_ts + (eta_to_use * 60LL);
+
+                        // allow small buffer (e.g., person needs 10 minutes to get to stop)
+                        const long long buffer_seconds = 10 * 60LL;
+
+                        std::lock_guard<std::mutex> lg(g_calendar_mutex);
+                        for (const auto& ev : g_calendar_events) {
+                            if (ev.start_epoch == 0) continue;
+                            // if event starts within [arrival - buffer, arrival + buffer] consider conflict
+                            if (ev.start_epoch >= (arrival_epoch - buffer_seconds) && ev.start_epoch <= (arrival_epoch + buffer_seconds)) {
+                                conflict = true;
+                                // human friendly message
+                                std::time_t t = (std::time_t)ev.start_epoch;
+                                char buf[64];
+                                std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", std::localtime(&t));
+                                conflict_msg = std::string("Calendar: '") + (ev.summary.empty() ? "event" : ev.summary) + "' at " + buf + " may conflict with ETA";
+                                break;
+                            }
+                        }
+                    }
+                    r["calendar_conflict"] = conflict;
+                    r["calendar_conflict_msg"] = conflict ? conflict_msg : "";
+                }
+                catch (...) {
+                    r["calendar_conflict"] = false;
+                    r["calendar_conflict_msg"] = "";
+                }
+
+
+
+
                 res.set_content(r.dump(), "application/json");
             }
             catch (const std::exception& e) {

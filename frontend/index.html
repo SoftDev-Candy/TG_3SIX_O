@@ -73,6 +73,14 @@
             <button id="routeBtn" class="btn">Compute Route</button>
             <button id="monitorBtn" class="btn">Monitor this route (threshold: <input id="monitorThreshold" type="number" value="3" min="1" style="width:60px"> min)</button>
 
+            <hr />
+            <div>
+                <label for="icsFile">Upload .ics calendar:</label>
+                <input type="file" id="icsFile" accept=".ics" />
+                <button id="uploadIcsBtn" class="btn">Upload Calendar</button>
+                <div id="calendarStatus" style="font-size:12px;margin-top:6px"></div>
+            </div>
+
         </div>
         <div style="margin-top:8px">
             <strong>Persona</strong><br />
@@ -432,6 +440,17 @@
                         safeSetText('eta-dna', '—');
                     }
 
+                    // show calendar conflict if present
+                    try {
+                        if (j.calendar_conflict) {
+                            const msg = j.calendar_conflict_msg || "Calendar conflict detected";
+                            pushLogLine("[CALENDAR] " + msg, 2);
+                            // visually mark status bar
+                            setStatus("Calendar conflict: " + msg);
+                        }
+                    } catch (e) { console.warn("calendar display failed", e); }
+
+
                     // status line
                     setStatus(`ETA (baseline): ${baseText} | ETA (current): ${adjText}`);
 
@@ -562,6 +581,33 @@
                 // more informative error log
                 pushLogLine('predict error: ' + (err && err.message ? err.message : String(err)), 2);
                 console.error('predict handler error (full):', err);
+            }
+        });
+        document.getElementById('uploadIcsBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('icsFile');
+            const statusEl = document.getElementById('calendarStatus');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                if (statusEl) statusEl.innerText = "Select an .ics file first.";
+                return;
+            }
+            const f = fileInput.files[0];
+            const text = await f.text().catch(e => { if (statusEl) statusEl.innerText = "Failed reading file."; return null; });
+            if (!text) return;
+
+            try {
+                const resp = await fetch(API + '/calendar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: text
+                });
+                const j = await resp.json();
+                if (j.imported !== undefined) {
+                    if (statusEl) statusEl.innerText = `Imported ${j.imported} events`;
+                } else {
+                    if (statusEl) statusEl.innerText = `Import response: ${JSON.stringify(j)}`;
+                }
+            } catch (e) {
+                if (statusEl) statusEl.innerText = "Upload failed: " + e.message;
             }
         });
 
