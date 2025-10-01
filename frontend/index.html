@@ -441,14 +441,27 @@
                     }
 
                     // show calendar conflict if present
+                    // --- calendar conflict UI (non-destructive) ---
                     try {
-                        if (j.calendar_conflict) {
+                        if (j && j.calendar_conflict) {
                             const msg = j.calendar_conflict_msg || "Calendar conflict detected";
                             pushLogLine("[CALENDAR] " + msg, 2);
-                            // visually mark status bar
-                            setStatus("Calendar conflict: " + msg);
+
+                            // show in the small calendar UI area if present
+                            safeSetText('calendarStatus', msg);
+                            const calEl = document.getElementById('calendarStatus');
+                            if (calEl) calEl.style.color = "orange";
+
+                            // non-destructive status update: append to existing status-message
+                            const prev = (document.getElementById('status-message') && document.getElementById('status-message').innerText) || "Status:";
+                            setStatus(prev + " | Calendar: " + msg);
+                        } else {
+                            // clear calendar UI if no conflict
+                            safeSetText('calendarStatus', '');
                         }
-                    } catch (e) { console.warn("calendar display failed", e); }
+                    } catch (e) {
+                        console.warn("calendar display failed", e);
+                    }
 
 
                     // status line

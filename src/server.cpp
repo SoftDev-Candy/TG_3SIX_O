@@ -332,6 +332,12 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                         }
                     }
                 }
+                // DEBUG: print parsed events to server console for troubleshooting
+                std::cout << "[calendar] parsed events count = " << parsed.size() << std::endl;
+                for (const auto& ev : parsed) {
+                    std::cout << "[calendar] event -> start_epoch=" << ev.start_epoch
+                        << " summary=\"" << ev.summary << "\"" << std::endl;
+                }
 
                 // store parsed events (replace existing in-memory calendar)
                 {
