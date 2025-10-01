@@ -73,6 +73,11 @@ std::vector<Incident> Store::get_incidents_copy() {
     return out;
 }
 
+void Store::clear_incidents() {
+    std::lock_guard<std::mutex> g(mutex_);
+    incidents_.clear();
+}
+
 void Store::remove_expired() {
     std::lock_guard<std::mutex> g(mutex_);
     auto now = (long long)std::chrono::system_clock::to_time_t(

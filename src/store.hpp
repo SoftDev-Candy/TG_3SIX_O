@@ -42,6 +42,9 @@ public:
     // Purges expired incidents from storage (thread-safe).
     void remove_expired();
 
+    // remove everything (admin/demo helper)
+    void clear_incidents();
+
 private:
     std::mutex mutex_;
     int nextTrip_;

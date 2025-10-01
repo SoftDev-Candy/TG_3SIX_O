@@ -563,39 +563,59 @@
                 const j = await resp.json();
                 // defensive extracts
                 const predicted = (typeof j.dna_predicted_extra_minutes === 'number') ? j.dna_predicted_extra_minutes : Number(j.dna_predicted_extra_minutes) || 0;
-
                 pushLogLine(`Persona "${personaName}" predicted extra: ${predicted} min`, 1);
 
-                // Update dnaPanel safely
+                // show dna message
                 const panel = document.getElementById('dnaPanel');
                 if (panel) {
-                    // create small block for this persona
                     const el = document.createElement('div');
                     el.style.marginTop = '6px';
                     el.textContent = `${personaName}: +${predicted} min — ${j.dna_message || ''}`;
                     panel.appendChild(el);
-                } else {
-                    console.warn('dnaPanel not found in DOM.');
                 }
 
-                // Update ETA display only if the element exists (guarded)
-                const etaCurEl = document.getElementById('eta-current');
-                if (etaCurEl) {
-                    // we purposely don't overwrite the current ETA with predicted — instead show appended note
-                    const note = ` (+${predicted}m predicted)`;
-                    // avoid blowing up if innerText is missing
-                    const baseText = etaCurEl.innerText || etaCurEl.textContent || '';
-                    etaCurEl.innerText = baseText + note;
-                } else {
-                    console.warn('eta-current element missing; skipping ETA update.');
-                }
+                // Visual persona alert: if server flagged dna_alert, show big notice
+                try {
+                    if (j.dna_alert) {
+                        const alertMsg = (j.dna_alert_msg && j.dna_alert_msg.detail) ? j.dna_alert_msg.detail : `Predicted delay ~${predicted} min`;
+                        pushLogLine(`⚠️ PERSONA ALERT: ${personaName} — ${alertMsg}`, 3);
 
+                        // flash the status bar briefly
+                        const statusBar = document.getElementById('status-bar');
+                        if (statusBar) {
+                            const origBg = statusBar.style.background;
+                            statusBar.style.transition = "background 0.3s";
+                            statusBar.style.background = "#8a2b2b"; // alert red tone
+                            setTimeout(() => { statusBar.style.background = origBg; }, 2500);
+                        }
+
+                        // show suggested alternative (if provided)
+                        if (j.suggested_route) {
+                            const s = j.suggested_route;
+                            const altText = (s.which && s.which !== 'none') ? `Suggested: ${s.which} (ETA ${s.eta_minutes}m, saves ${s.saved_minutes}m)` : 'No alternative available';
+                            pushLogLine(`SUGGESTION: ${altText}`, 1);
+
+                            // Optionally, update the ETA display for the suggestion quickly
+                            safeSetText('eta-dna', `+${Math.round(predicted)}m`);
+                            // highlight adjusted/baseline line depending on suggestion
+                            if (s.which === 'adjusted' && window.currentPathLines && window.currentPathLines.adjustedLine) {
+                                window.currentPathLines.adjustedLine.setStyle({ color: '#ff4d4d', weight: 8 });
+                                setTimeout(() => { if (window.currentPathLines.adjustedLine) window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 }); }, 3500);
+                            } else if (s.which === 'baseline' && window.currentPathLines && window.currentPathLines.baselineLine) {
+                                window.currentPathLines.baselineLine.setStyle({ color: '#2ecc40', weight: 8 });
+                                setTimeout(() => { if (window.currentPathLines.baselineLine) window.currentPathLines.baselineLine.setStyle({ dashArray: '6,6', weight: 3, color: '#0077cc' }); }, 3500);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('persona alert UI failed', e);
+                }
             } catch (err) {
-                // more informative error log
-                pushLogLine('predict error: ' + (err && err.message ? err.message : String(err)), 2);
-                console.error('predict handler error (full):', err);
-            }
-        });
+                    console.error('predict handler failed', err);
+                    pushLogLine(`predict error: ${err && err.message ? err.message : String(err)}`, 2);
+                }
+            });
+
         document.getElementById('uploadIcsBtn').addEventListener('click', async () => {
             const fileInput = document.getElementById('icsFile');
             const statusEl = document.getElementById('calendarStatus');
@@ -648,23 +668,23 @@
         });
 
         // inside your SSE onmessage handler (where you parse data), add:
-        if (data.monitor_alerts && data.monitor_alerts.length) {
-            data.monitor_alerts.forEach(a => {
-                // friendly text
-                const text = `[ALERT] route ${a.src}->${a.dst} delayed by ${a.delta} min (eta ${a.eta_adj} vs baseline ${a.eta_base})`;
-                pushLogLine(text, 3);
-                // visual: flash status or show toast
-                setStatus("ALERT: " + text);
-                // optionally show a big callout on map or highlight lines:
-                if (window.currentPathLines && window.currentPathLines.adjustedLine) {
-                    // briefly pulse the adjusted line
-                    window.currentPathLines.adjustedLine.setStyle({ color: '#ff0000', weight: 6 });
-                    setTimeout(() => {
-                        if (window.currentPathLines.adjustedLine) window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 });
-                    }, 4000);
-                }
-            });
-        }
+        //if (data.monitor_alerts && data.monitor_alerts.length) {
+        //    data.monitor_alerts.forEach(a => {
+        //        // friendly text
+        //        const text = `[ALERT] route ${a.src}->${a.dst} delayed by ${a.delta} min (eta ${a.eta_adj} vs baseline ${a.eta_base})`;
+        //        pushLogLine(text, 3);
+        //        // visual: flash status or show toast
+        //        setStatus("ALERT: " + text);
+        //        // optionally show a big callout on map or highlight lines:
+        //        if (window.currentPathLines && window.currentPathLines.adjustedLine) {
+        //            // briefly pulse the adjusted line
+        //            window.currentPathLines.adjustedLine.setStyle({ color: '#ff0000', weight: 6 });
+        //            setTimeout(() => {
+        //                if (window.currentPathLines.adjustedLine) window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 });
+        //            }, 4000);
+        //        }
+        //    });
+        //}
 
         /* =========================
            SSE subscribe (reconnect on error)
@@ -741,6 +761,33 @@
 
             connect();
         }
+
+        // Quick hardcoded persona for demo (inserted just before subscribeEvents())
+        const savedPersonas = {
+            "Sarah": { name: "Sarah", preferred_src: 0, preferred_dst: 5, leave_minutes_before: 10 }
+        };
+
+        // add a quick button to use Sarah
+        (function addSarahButton() {
+            const c = document.getElementById('controls');
+            if (!c) return;
+            const btn = document.createElement('button');
+            btn.innerText = 'Use Sarah';
+            btn.className = 'btn';
+            btn.style.marginTop = '6px';
+            btn.addEventListener('click', () => {
+                const persona = savedPersonas.Sarah;
+                const pn = document.getElementById('personaName');
+                const s = document.getElementById('src');
+                const d = document.getElementById('dst');
+                if (pn) pn.value = persona.name;
+                if (s) s.value = persona.preferred_src;
+                if (d) d.value = persona.preferred_dst;
+                pushLogLine('Loaded persona Sarah', 1);
+            });
+            c.appendChild(btn);
+        })();
+
 
         subscribeEvents();
 

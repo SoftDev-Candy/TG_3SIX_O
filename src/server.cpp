@@ -355,6 +355,50 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             }
             });
 
+        // POST /calendar/clear  (clears in-memory calendar events)
+        svr.Post("/calendar/clear", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                std::lock_guard<std::mutex> lg(g_calendar_mutex);
+                g_calendar_events.clear();
+                res.set_content(nlohmann::json({ {"cleared", true}, {"count", 0} }).dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 500;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+        // POST /calendar/add  (dev helper: add single event by JSON { "start_epoch": 12345, "summary": "text" })
+        svr.Post("/calendar/add", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                long long epoch = body.value("start_epoch", 0LL);
+                std::string summary = body.value("summary", std::string("event"));
+                if (epoch == 0) {
+                    res.status = 400;
+                    res.set_content(nlohmann::json({ {"error","missing start_epoch"} }).dump(), "application/json");
+                    return;
+                }
+                CalendarEvent ev;
+                ev.start_epoch = epoch;
+                ev.summary = summary;
+                {
+                    std::lock_guard<std::mutex> lg(g_calendar_mutex);
+                    g_calendar_events.push_back(ev);
+                }
+                res.set_content(nlohmann::json({ {"added", true}, {"start_epoch", epoch}, {"summary", summary} }).dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
+
+
+
 
         // GET /incidents
         svr.Get("/incidents", [&set_cors](const httplib::Request&, httplib::Response& res) {
@@ -364,6 +408,21 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             g_events_cv.notify_all();
 
             });
+
+        // POST /incidents/clear  - clears all incidents (dev helper)
+        svr.Post("/incidents/clear", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                // ensure Store has a clear or do via existing API (we have map inside Store)
+                STORE.remove_all_incidents(); // ADD this method if missing; otherwise add a small Store::clear wrapper
+                res.set_content(nlohmann::json({ {"cleared", true} }).dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 500;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+
 
         // POST /route
         svr.Post("/route", [&set_cors, &GRAPH](const httplib::Request& req, httplib::Response& res) {
@@ -584,7 +643,64 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 r["adjusted"] = pair["adjusted"];
                 r["dna_predicted_extra_minutes"] = dna_pred;
                 r["dna_message"] = DNA.summary_short();
+
+                // --- DNA alert & suggested alternative (server-side) ---
+                const double DNA_ALERT_THRESHOLD = 10.0; // minutes -> tune for demo
+                try {
+                    bool dna_alert = (dna_pred >= DNA_ALERT_THRESHOLD);
+                    r["dna_alert"] = dna_alert;
+                    if (dna_alert) {
+                        r["dna_alert_msg"] = nlohmann::json::object({
+                            {"title", "Predicted Significant Delay"},
+                            {"detail", std::string("TransitDNA predicts ~") + std::to_string((int)std::round(dna_pred)) + " min extra for this persona"}
+                            });
+                    }
+                    else {
+                        r["dna_alert_msg"] = nlohmann::json::object();
+                    }
+
+                    // Suggest a simple alternative: pick the faster of baseline vs adjusted
+                    // and show the saved minutes if any.
+                    long long chosen_base = eta_base;
+                    long long chosen_alt = eta_adj;
+                    nlohmann::json suggested = nlohmann::json::object();
+                    if (eta_base >= 0 && eta_adj >= 0) {
+                        if (eta_base <= eta_adj) {
+                            suggested["which"] = "baseline";
+                            suggested["eta_minutes"] = eta_base;
+                            suggested["saved_minutes"] = (eta_adj - eta_base);
+                        }
+                        else {
+                            suggested["which"] = "adjusted";
+                            suggested["eta_minutes"] = eta_adj;
+                            suggested["saved_minutes"] = (eta_base - eta_adj);
+                        }
+                    }
+                    else if (eta_base >= 0) {
+                        suggested["which"] = "baseline";
+                        suggested["eta_minutes"] = eta_base;
+                        suggested["saved_minutes"] = 0;
+                    }
+                    else if (eta_adj >= 0) {
+                        suggested["which"] = "adjusted";
+                        suggested["eta_minutes"] = eta_adj;
+                        suggested["saved_minutes"] = 0;
+                    }
+                    else {
+                        suggested["which"] = "none";
+                        suggested["eta_minutes"] = -1;
+                        suggested["saved_minutes"] = 0;
+                    }
+                    r["suggested_route"] = suggested;
+                }
+                catch (...) {
+                    r["dna_alert"] = false;
+                    r["dna_alert_msg"] = nlohmann::json::object();
+                    r["suggested_route"] = nlohmann::json::object();
+                }
+
                 res.set_content(r.dump(), "application/json");
+
             }
             catch (const std::exception& e) {
                 res.status = 400;
