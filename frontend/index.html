@@ -731,6 +731,7 @@
                         }
 
                         // === NEW: Monitor alerts ===
+                        // === NEW: Monitor alerts ===
                         if (data.monitor_alerts && data.monitor_alerts.length) {
                             data.monitor_alerts.forEach(a => {
                                 const text = `[ALERT] route ${a.src}->${a.dst} delayed by ${a.delta} min (eta ${a.eta_adj} vs baseline ${a.eta_base})`;
@@ -745,6 +746,33 @@
                                 }
                             });
                         }
+
+                        // === NEW: DNA alerts (server-side) ===
+                        try {
+                            if (data.dna_alerts && Array.isArray(data.dna_alerts) && data.dna_alerts.length) {
+                                data.dna_alerts.forEach(a => {
+                                    try {
+                                        const msg = `[DNA ALERT] ${a.message || ''} (predicted +${Math.round(a.predicted_extra_minutes || 0)}m)`;
+                                        pushLogLine(msg, 3);
+
+                                        // flash the status bar
+                                        const sb = document.getElementById('status-bar');
+                                        if (sb) {
+                                            const prevBg = sb.style.background;
+                                            sb.style.transition = "background 0.2s";
+                                            sb.style.background = '#8a2b2b';
+                                            setTimeout(() => { sb.style.background = prevBg; }, 2500);
+                                        }
+
+                                        // optional: highlight adjusted line if suggestion exists
+                                        if (a.suggested_route && a.suggested_route.which === 'adjusted' && window.currentPathLines && window.currentPathLines.adjustedLine) {
+                                            window.currentPathLines.adjustedLine.setStyle({ color: '#ff4d4d', weight: 8 });
+                                            setTimeout(() => { if (window.currentPathLines.adjustedLine) window.currentPathLines.adjustedLine.setStyle({ color: 'red', weight: 4 }); }, 3500);
+                                        }
+                                    } catch (e) { console.warn('dna_alert render item failed', e, a); }
+                                });
+                            }
+                        } catch (e) { console.warn('dna_alerts render failed', e); }
 
                     } catch (err) {
                         console.error("SSE parse error", err, ev.data);

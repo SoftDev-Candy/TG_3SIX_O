@@ -8,6 +8,10 @@
     #include<mutex> //for th
     #include<vector>
 
+// dna alert queue for SSE
+static std::mutex g_dna_alerts_mutex;
+static std::vector<nlohmann::json> g_dna_alerts;
+
 // ---------------- Calendar (in-memory, simple .ics parser) ----------------
 struct CalendarEvent {
     long long start_epoch = 0; // epoch seconds UTC
@@ -33,8 +37,6 @@ static int g_next_monitor_id = 1;
     //For da Calenders 
     static std::mutex g_calendar_mutex;
     static std::vector<CalendarEvent> g_calendar_events;
-
-
 
 // Very small helper: parse a single DTSTART line like "DTSTART:20250930T090000Z" or "DTSTART:20250930T090000"
 static long long parse_ics_dtstart(const std::string& line) {
@@ -87,6 +89,7 @@ Graph build_demo_graph() {
     g.n = 6;
     return g;
 }
+
 // made it global might need it late for other purposes
 nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
     Graph baseline = GRAPH;
@@ -414,7 +417,7 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             set_cors(res);
             try {
                 // ensure Store has a clear or do via existing API (we have map inside Store)
-                STORE.remove_all_incidents(); // ADD this method if missing; otherwise add a small Store::clear wrapper
+                STORE.clear_incidents(); // ADD this method if missing; otherwise add a small Store::clear wrapper
                 res.set_content(nlohmann::json({ {"cleared", true} }).dump(), "application/json");
             }
             catch (const std::exception& e) {
@@ -645,24 +648,13 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 r["dna_message"] = DNA.summary_short();
 
                 // --- DNA alert & suggested alternative (server-side) ---
+// This version also pushes an alert into the global g_dna_alerts list.
                 const double DNA_ALERT_THRESHOLD = 10.0; // minutes -> tune for demo
                 try {
                     bool dna_alert = (dna_pred >= DNA_ALERT_THRESHOLD);
-                    r["dna_alert"] = dna_alert;
-                    if (dna_alert) {
-                        r["dna_alert_msg"] = nlohmann::json::object({
-                            {"title", "Predicted Significant Delay"},
-                            {"detail", std::string("TransitDNA predicts ~") + std::to_string((int)std::round(dna_pred)) + " min extra for this persona"}
-                            });
-                    }
-                    else {
-                        r["dna_alert_msg"] = nlohmann::json::object();
-                    }
 
                     // Suggest a simple alternative: pick the faster of baseline vs adjusted
                     // and show the saved minutes if any.
-                    long long chosen_base = eta_base;
-                    long long chosen_alt = eta_adj;
                     nlohmann::json suggested = nlohmann::json::object();
                     if (eta_base >= 0 && eta_adj >= 0) {
                         if (eta_base <= eta_adj) {
@@ -692,6 +684,44 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                         suggested["saved_minutes"] = 0;
                     }
                     r["suggested_route"] = suggested;
+
+                    // Build a user-facing dna_alert message/object
+                    if (dna_alert) {
+                        nlohmann::json alert_msg_obj = nlohmann::json::object({
+                            {"title", "Predicted Significant Delay"},
+                            {"detail", std::string("TransitDNA predicts ~") + std::to_string((int)std::round(dna_pred)) + " min extra for this persona"}
+                            });
+                        r["dna_alert"] = true;
+                        r["dna_alert_msg"] = alert_msg_obj;
+
+                        // Create server-side alert record (store persona from request body if present)
+                        try {
+                            nlohmann::json persona_field = nlohmann::json::object();
+                            if (body.contains("persona")) persona_field = body["persona"];
+
+                            nlohmann::json alert = {
+                                {"time", (long long)std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())},
+                                {"persona", persona_field},
+                                {"src", src},
+                                {"dst", dst},
+                                {"predicted_extra_minutes", dna_pred},
+                                {"message", std::string("TransitDNA predicts ~") + std::to_string((int)std::round(dna_pred)) + " min extra"}
+                            };
+
+                            {
+                                std::lock_guard<std::mutex> lg(g_dna_alerts_mutex);
+                                g_dna_alerts.push_back(alert);
+                                if (g_dna_alerts.size() > 50) g_dna_alerts.erase(g_dna_alerts.begin());
+                            }
+                        }
+                        catch (...) {
+                            // non-fatal: continue without crashing if recording fails
+                        }
+                    }
+                    else {
+                        r["dna_alert"] = false;
+                        r["dna_alert_msg"] = nlohmann::json::object();
+                    }
                 }
                 catch (...) {
                     r["dna_alert"] = false;
@@ -751,7 +781,7 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                             }
                             const std::string incidents_str = incidents_json.dump();
 
-                            // 2) Build payload JSON locally
+                            // THOU SHALL Build THAT payload JSON locally IF NOT MIGHT HAVE TO BRUTE FORCE THIS MFER
                             nlohmann::json payload;
                             payload["incidents"] = incidents_json;
 
@@ -836,7 +866,7 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
 
 
 
-                            // 3) Evaluate monitors using copies (avoid long locks)
+                            // We shall Evaluate monitors using copies (avoid long locks)
                             std::vector<Monitor> monitors_copy;
                             {
                                 std::lock_guard<std::mutex> lg(g_monitors_mutex);
@@ -896,6 +926,18 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                                 } // for monitors
 
                                 if (!alerts.empty()) payload["monitor_alerts"] = alerts;
+                                // copy dna alerts under lock, then attach (and optionally clear)
+                                nlohmann::json dna_copy = nlohmann::json::array();
+                                {
+                                    std::lock_guard<std::mutex> lg(g_dna_alerts_mutex);
+                                    if (!g_dna_alerts.empty()) {
+                                        dna_copy = g_dna_alerts;
+                                        // OPTIONAL: if you want one-shot semantics for this connection, uncomment:
+                                        // g_dna_alerts.clear();
+                                    }
+                                }
+                                payload["dna_alerts"] = dna_copy;
+
                             } // if monitors
 
                             // 4) Decide whether to send (last_incidents_str is local per-connection so safe)

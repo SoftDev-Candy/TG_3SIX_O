@@ -29,38 +29,59 @@ long long TransitDNA::predictDelay(int node_or_edge, int severity) {
 
     auto& v = it->second;
     long long sum = std::accumulate(v.begin(), v.end(), 0LL);
-    return sum / v.size();
+    return sum / static_cast<long long>(v.size());
 }
 
 double TransitDNA::computeRiskScore(int node_or_edge, int severity) {
     // Simple heuristic: higher severity = higher risk, scaled by variance
-    std::lock_guard<std::mutex> lock(mtx);
+    
+   /* std::lock_guard<std::mutex> lock(mtx);
     auto it = delayBuckets.find({ node_or_edge, severity });
-    if (it == delayBuckets.end() || it->second.empty()) return 0.2 * severity;
+    if (it == delayBuckets.end() || it->second.empty()) return 0.2 * severity;*/
 
-    double avg = predictDelay(node_or_edge, severity);
+   //Mentor said no need to lock here so we can use predict delay which will take the mutex//
+
+    auto avg_ll = predictDelay(node_or_edge, severity);
+    if (avg_ll == 0) return 0.2 * severity;
+
+    double avg = static_cast<double>(avg_ll);
     double risk = std::min(1.0, (avg / 20.0) + (0.3 * severity));
     return risk;
+
 }
 
 std::string TransitDNA::exportSummaryJSON() {
     std::lock_guard<std::mutex> lock(mtx);
-    nlohmann::json j;
-    for (auto& [key, delays] : delayBuckets) {
-        int node = key.first;
-        int sev = key.second;
-        if (!delays.empty()) {
-            long long avg = std::accumulate(delays.begin(), delays.end(), 0LL) / delays.size();
-            j.push_back({
-                {"node", node},
-                {"severity", sev},
-                {"avg_delay", avg},
-                {"samples", delays.size()}
-                });
-        }
+    nlohmann::json out;
+    nlohmann::json node_stats = nlohmann::json::object();
+
+    // aggregate per node irrespective of severity for summary view
+    std::map<int, std::pair<long long, int>> agg; // node -> (sum, count)
+    for (auto& kv : delayBuckets) {
+        int node = kv.first.first;
+        auto& delays = kv.second;
+        if (delays.empty()) continue;
+        long long sum = std::accumulate(delays.begin(), delays.end(), 0LL);
+        agg[node].first += sum;
+        agg[node].second += static_cast<int>(delays.size());
     }
-    return j.dump();
+
+    for (auto& p : agg) {
+        int node = p.first;
+        long long sum = p.second.first;
+        int count = p.second.second;
+        double avg = (count > 0) ? (double)sum / (double)count : 0.0;
+        node_stats[std::to_string(node)] = {
+            {"avg_delay", avg},
+            {"count", count}
+        };
+    }
+
+    out["node_stats"] = node_stats;
+    out["history_count"] = static_cast<int>(history.size());
+    return out.dump();
 }
+
 
 double TransitDNA::predict_delay_for_path(const std::vector<int>& path)
 {
