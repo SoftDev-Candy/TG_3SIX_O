@@ -8,10 +8,6 @@
     #include<mutex> //for th
     #include<vector>
 
-// dna alert queue for SSE
-static std::mutex g_dna_alerts_mutex;
-static std::vector<nlohmann::json> g_dna_alerts;
-
 // ---------------- Calendar (in-memory, simple .ics parser) ----------------
 struct CalendarEvent {
     long long start_epoch = 0; // epoch seconds UTC
@@ -37,6 +33,15 @@ static int g_next_monitor_id = 1;
     //For da Calenders 
     static std::mutex g_calendar_mutex;
     static std::vector<CalendarEvent> g_calendar_events;
+
+    // dna alert queue for SSE
+    static std::mutex g_dna_alerts_mutex;
+    static std::vector<nlohmann::json> g_dna_alerts;
+
+    // -------------------PERSONA ADDED HERE LOOK HERE BLIND ***k stopping adding multiple times ---------------------
+    static std::mutex g_personas_mutex;
+    static std::map<std::string, nlohmann::json> g_personas; // key = name -> persona JSON
+
 
 // Very small helper: parse a single DTSTART line like "DTSTART:20250930T090000Z" or "DTSTART:20250930T090000"
 static long long parse_ics_dtstart(const std::string& line) {
@@ -542,9 +547,6 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                     r["calendar_conflict_msg"] = "";
                 }
 
-
-
-
                 res.set_content(r.dump(), "application/json");
             }
             catch (const std::exception& e) {
@@ -570,6 +572,20 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             set_cors(res);
             try {
                 auto body = nlohmann::json::parse(req.body);
+
+                nlohmann::json persona = body.value("persona", nlohmann::json::object());
+                if (persona.contains("name")) {
+                    std::string pname = persona["name"].get<std::string>();
+                    std::lock_guard<std::mutex> lg(g_personas_mutex);
+                    if (g_personas.count(pname)) {
+                        for (auto& kv : g_personas[pname].items()) {
+                            if (!persona.contains(kv.key())) persona[kv.key()] = kv.value();
+                        }
+                    }
+                    // write the merged persona back into body so later code sees it if you prefer:
+                    body["persona"] = persona;
+                }
+
                 int src = body.value("src", 0);
                 int dst = body.value("dst", 0);
                 if (src < 0 || src >= GRAPH.n || dst < 0 || dst >= GRAPH.n) {
@@ -737,6 +753,35 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
             }
             });
+
+            // POST /persona/save  { "name": "Sarah", "src":0, "dst":5, "prefs": {...} }
+            svr.Post("/persona/save", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+                set_cors(res);
+                try {
+                    auto body = nlohmann::json::parse(req.body);
+                    auto name = body.value("name", std::string());
+                    if (name.empty()) { res.status = 400; res.set_content(nlohmann::json({ {"error","missing name"} }).dump(), "application/json"); return; }
+                    {
+                        std::lock_guard<std::mutex> lg(g_personas_mutex);
+                        g_personas[name] = body;
+                    }
+                    res.set_content(nlohmann::json({ {"saved", true}, {"name", name} }).dump(), "application/json");
+                }
+                catch (const std::exception& e) {
+                    res.status = 400; res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+                }
+                });
+
+            // GET /personas  -> list saved persona names
+            svr.Get("/personas", [&set_cors](const httplib::Request&, httplib::Response& res) {
+                set_cors(res);
+                nlohmann::json out = nlohmann::json::array();
+                {
+                    std::lock_guard<std::mutex> lg(g_personas_mutex);
+                    for (auto& p : g_personas) out.push_back(p.second);
+                }
+                res.set_content(out.dump(), "application/json");
+                });
 
 
 

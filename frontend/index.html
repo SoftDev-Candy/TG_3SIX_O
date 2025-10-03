@@ -86,6 +86,15 @@
             <strong>Persona</strong><br />
             <input id="personaName" placeholder="Name" style="width:100px" />
             <button id="personaPredictBtn">Predict for Persona</button>
+
+            <!-- NEW: Persona quick selector + use button -->
+            <div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
+                <select id="personaList" style="flex:1; min-width:120px;">
+                    <option value="">(choose)</option>
+                </select>
+                <button id="usePersonaBtn" class="btn" style="width:auto; padding:6px 10px;">Use Persona</button>
+            </div>
+
             <div id="dnaPanel" style="margin-top:6px;font-size:13px"></div>
         </div>
         <hr />
@@ -131,27 +140,7 @@
             <span id="eta-dna">-</span>)
         </div>
     </div>
-        <div>
-            <strong id="sb-title">Status:</strong>
-            <span id="sb-text">Waiting for route...</span>
-        </div>
-
-        <div style="display:flex; gap:12px; align-items:center;">
-            <div style="text-align:center;">
-                <div style="font-size:11px; opacity:0.8">Baseline ETA</div>
-                <div id="eta-baseline" style="font-size:18px; font-weight:700;">—</div>
-            </div>
-            <div style="text-align:center;">
-                <div style="font-size:11px; opacity:0.8">Current ETA</div>
-                <div id="eta-current" style="font-size:18px; font-weight:700;">—</div>
-            </div>
-            <div style="text-align:center;">
-                <div style="font-size:11px; opacity:0.8">Recommendation</div>
-                <div id="eta-rec" style="font-size:14px; font-weight:700; color:#ffd700;">—</div>
-            </div>
-            <div id="eta-saved" style="padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.12); font-weight:700;"></div>
-        </div>
-    </div>
+        
 
     <!--ETA display temp fix-->
     <div id="etaDisplay" style="
@@ -200,14 +189,14 @@
         const map = L.map('map').setView([50.0642, 19.9895], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
 
-        // Default 6 node coords (Kraków example). Replace with your desired lat/lon points.
+        // Default 6 node coordinates here for demo but for future we can OSRM or mapbox maybe 
         const nodes = [
-            [50.0646, 19.9892],
-            [50.0663, 19.9887],
-            [50.0674, 19.9886],
-            [50.0674, 19.9888],
-            [50.0644, 19.9895],
-            [50.0656, 19.9968]
+            [50.0741, 20.0042],
+            [50.0706, 20.0048],
+            [50.0673, 20.0046],
+            [50.0644, 19.9894],
+            [50.0676, 19.9888],
+            [50.0676, 19.9903]
         ];
 
         /* draw static node markers & edges for context */
@@ -815,13 +804,117 @@
             });
             c.appendChild(btn);
         })();
+        /* --- Persona list loader and Use Persona handler --- */
+        async function loadPersonas() {
+            try {
+                console.log('[ui] loadPersonas: fetching /personas...');
+                const resp = await fetch(API + '/personas');
+                if (!resp.ok) {
+                    console.warn('[ui] /personas returned', resp.status);
+                    // fallback to local demo persona if server blocked
+                    populatePersonasFromLocal();
+                    return;
+                }
+                const arr = await resp.json();
+                console.log('[ui] /personas =>', arr);
+                const sel = document.getElementById('personaList');
+                if (!sel) { console.warn('[ui] missing #personaList element'); return; }
+                sel.innerHTML = '<option value="">(choose)</option>';
+                if (!Array.isArray(arr) || arr.length === 0) {
+                    // server has no saved personas — fall back to local demo
+                    populatePersonasFromLocal();
+                    return;
+                }
+                arr.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.name || JSON.stringify(p);
+                    opt.text = p.name || (p.summary || opt.value);
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('[ui] loadPersonas failed', e);
+                // fallback to local demo if server unreachable
+                populatePersonasFromLocal();
+            }
+        }
 
+        // helper: fill dropdown from local savedPersonas if server empty
+        function populatePersonasFromLocal() {
+            const sel = document.getElementById('personaList');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">(choose)</option>';
+            for (const k of Object.keys(savedPersonas)) {
+                const p = savedPersonas[k];
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.text = p.name;
+                sel.appendChild(opt);
+            }
+            console.log('[ui] populatePersonasFromLocal used');
+        }
 
+        document.getElementById('usePersonaBtn').addEventListener('click', async () => {
+            const sel = document.getElementById('personaList');
+            if (!sel) { pushLogLine('Persona selector missing', 2); return; }
+            const name = sel.value;
+            if (!name) { pushLogLine('Select a persona first', 1); return; }
+
+            try {
+                // Always fetch all and find the persona (server may not support per-name query)
+                const resp = await fetch(API + '/personas');
+                let all = [];
+                if (resp.ok) {
+                    all = await resp.json();
+                } else {
+                    console.warn('[ui] GET /personas returned', resp.status, ' — using local fallback');
+                }
+                let p = (Array.isArray(all) ? all.find(x => x.name === name) : null);
+                if (!p) {
+                    // fallback to local savedPersonas
+                    p = savedPersonas[name] || null;
+                }
+                if (!p) { pushLogLine('Persona not found: ' + name, 2); return; }
+
+                if (document.getElementById('personaName')) document.getElementById('personaName').value = p.name || name;
+                if (typeof p.src !== 'undefined' && document.getElementById('src')) document.getElementById('src').value = p.src;
+                if (typeof p.dst !== 'undefined' && document.getElementById('dst')) document.getElementById('dst').value = p.dst;
+                // optional preferred fields
+                if (typeof p.preferred_src !== 'undefined' && document.getElementById('src')) document.getElementById('src').value = p.preferred_src;
+                if (typeof p.preferred_dst !== 'undefined' && document.getElementById('dst')) document.getElementById('dst').value = p.preferred_dst;
+
+                pushLogLine(`Loaded persona ${p.name}`, 1);
+
+                // autosave quick: populate persona on server if not present (non-blocking)
+                if (!all || !all.find(x => x.name === p.name)) {
+                    fetch(API + '/persona/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: p.name, src: p.preferred_src ?? p.src ?? 0, dst: p.preferred_dst ?? p.dst ?? 5 })
+                    }).then(() => { console.log('[ui] persona auto-saved to server'); }).catch(() => { });
+                }
+
+                // immediately compute route for persona defaults
+                const src = Number(document.getElementById('src').value);
+                const dst = Number(document.getElementById('dst').value);
+                computeRoute(src, dst);
+            } catch (e) {
+                console.error('usePersona failed', e);
+                pushLogLine('usePersona failed', 2);
+            }
+        });
+
+        // load personas once on page load added a safety check for the personas as well
+        window.addEventListener('load', () => {
+            loadPersonas();
+            // also populate quick local Sarah button if you want
+        });
+
+        //--------------------WE CALL SUBCRIBE EVENTS HERE-------------------------
         subscribeEvents();
 
         /* initial fallback */
         fetchIncidents();
-        setInterval(fetchIncidents, 30000); // very infrequent fallback polling
+        setInterval(fetchIncidents, 30000); // very infrequent fallback polling ...forgot why i needed this honestly uhh...I am dumb
     </script>
 </body>
 </html>
