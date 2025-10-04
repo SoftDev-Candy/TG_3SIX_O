@@ -1,0 +1,386 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "city": "Kraków",
+    "country": "Poland",
+    "lastUpdated": "2025-10-05",
+    "source": "TG-3SIX-O Hackathon Demo",
+    "routeCount": 7,
+    "description": "Key transit routes in Kraków for route planning demo"
+  },
+  "routes": [
+    {
+      "id": "tram-52",
+      "lineNumber": "52",
+      "transportType": "tram",
+      "name": "Os. Piastów - Czerwone Maki P+R",
+      "color": "#E63946",
+      "stops": [
+        {
+          "stopId": "os-piastow",
+          "name": "Os. Piastów",
+          "lat": 50.0955,
+          "lng": 19.9087,
+          "order": 1
+        },
+        {
+          "stopId": "krowodrza-gorka",
+          "name": "Krowodrza Górka",
+          "lat": 50.0850,
+          "lng": 19.9150,
+          "order": 5
+        },
+        {
+          "stopId": "galeria-krakowska",
+          "name": "Galeria Krakowska",
+          "lat": 50.0686,
+          "lng": 19.9469,
+          "order": 10
+        },
+        {
+          "stopId": "dworzec-glowny",
+          "name": "Dworzec Główny",
+          "lat": 50.0675,
+          "lng": 19.9452,
+          "order": 11
+        },
+        {
+          "stopId": "rondo-mogilskie",
+          "name": "Rondo Mogilskie",
+          "lat": 50.0693,
+          "lng": 19.9534,
+          "order": 12
+        },
+        {
+          "stopId": "tauron-arena",
+          "name": "Tauron Arena",
+          "lat": 50.067472,
+          "lng": 19.991694,
+          "order": 15
+        },
+        {
+          "stopId": "czerwone-maki",
+          "name": "Czerwone Maki P+R",
+          "lat": 50.0580,
+          "lng": 20.0350,
+          "order": 20
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9087, 50.0955],
+          [19.9150, 50.0850],
+          [19.9350, 50.0750],
+          [19.9469, 50.0686],
+          [19.9452, 50.0675],
+          [19.9534, 50.0693],
+          [19.975, 50.068],
+          [19.991694, 50.067472],
+          [20.015, 50.062],
+          [20.0350, 50.0580]
+        ]
+      }
+    },
+    {
+      "id": "tram-4",
+      "lineNumber": "4",
+      "transportType": "tram",
+      "name": "Bronowice - Wzgórza Krzesławickie",
+      "color": "#457B9D",
+      "stops": [
+        {
+          "stopId": "bronowice",
+          "name": "Bronowice",
+          "lat": 50.0890,
+          "lng": 19.8950,
+          "order": 1
+        },
+        {
+          "stopId": "galeria-krakowska",
+          "name": "Galeria Krakowska",
+          "lat": 50.0686,
+          "lng": 19.9469,
+          "order": 8
+        },
+        {
+          "stopId": "teatr-slowackiego",
+          "name": "Teatr Słowackiego",
+          "lat": 50.0650,
+          "lng": 19.9413,
+          "order": 9
+        },
+        {
+          "stopId": "main-square",
+          "name": "Rynek Główny",
+          "lat": 50.0619,
+          "lng": 19.9368,
+          "order": 10
+        },
+        {
+          "stopId": "wzgorza-krzeslawickie",
+          "name": "Wzgórza Krzesławickie",
+          "lat": 50.0950,
+          "lng": 20.0500,
+          "order": 18
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.8950, 50.0890],
+          [19.9200, 50.0750],
+          [19.9469, 50.0686],
+          [19.9413, 50.0650],
+          [19.9368, 50.0619],
+          [19.9600, 50.0700],
+          [20.0000, 50.0850],
+          [20.0500, 50.0950]
+        ]
+      }
+    },
+    {
+      "id": "tram-8",
+      "lineNumber": "8",
+      "transportType": "tram",
+      "name": "Salwator - Nowy Bieżanów P+R",
+      "color": "#F1A208",
+      "stops": [
+        {
+          "stopId": "salwator",
+          "name": "Salwator",
+          "lat": 50.0590,
+          "lng": 19.9150,
+          "order": 1
+        },
+        {
+          "stopId": "wawel",
+          "name": "Wawel",
+          "lat": 50.0544,
+          "lng": 19.9356,
+          "order": 5
+        },
+        {
+          "stopId": "main-square",
+          "name": "Rynek Główny",
+          "lat": 50.0619,
+          "lng": 19.9368,
+          "order": 7
+        },
+        {
+          "stopId": "dworzec-glowny",
+          "name": "Dworzec Główny",
+          "lat": 50.0675,
+          "lng": 19.9452,
+          "order": 9
+        },
+        {
+          "stopId": "nowy-biezanow",
+          "name": "Nowy Bieżanów P+R",
+          "lat": 50.0050,
+          "lng": 19.9900,
+          "order": 18
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9150, 50.0590],
+          [19.9250, 50.0560],
+          [19.9356, 50.0544],
+          [19.9368, 50.0619],
+          [19.9452, 50.0675],
+          [19.9600, 50.0500],
+          [19.9750, 50.0300],
+          [19.9900, 50.0050]
+        ]
+      }
+    },
+    {
+      "id": "tram-10",
+      "lineNumber": "10",
+      "transportType": "tram",
+      "name": "Łagiewniki - Pleszów",
+      "color": "#2A9D8F",
+      "stops": [
+        {
+          "stopId": "lagiewniki",
+          "name": "Łagiewniki",
+          "lat": 50.0150,
+          "lng": 19.9350,
+          "order": 1
+        },
+        {
+          "stopId": "wawel",
+          "name": "Wawel",
+          "lat": 50.0544,
+          "lng": 19.9356,
+          "order": 6
+        },
+        {
+          "stopId": "dworzec-glowny",
+          "name": "Dworzec Główny",
+          "lat": 50.0675,
+          "lng": 19.9452,
+          "order": 8
+        },
+        {
+          "stopId": "rondo-mogilskie",
+          "name": "Rondo Mogilskie",
+          "lat": 50.0693,
+          "lng": 19.9534,
+          "order": 9
+        },
+        {
+          "stopId": "pleszow",
+          "name": "Pleszów",
+          "lat": 50.0850,
+          "lng": 20.0600,
+          "order": 15
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9350, 50.0150],
+          [19.9356, 50.0544],
+          [19.9400, 50.0620],
+          [19.9452, 50.0675],
+          [19.9534, 50.0693],
+          [19.9800, 50.0750],
+          [20.0200, 50.0800],
+          [20.0600, 50.0850]
+        ]
+      }
+    },
+    {
+      "id": "bus-52",
+      "lineNumber": "52",
+      "transportType": "bus",
+      "name": "Krowodrza Górka - Borek Fałęcki",
+      "color": "#264653",
+      "stops": [
+        {
+          "stopId": "krowodrza-gorka",
+          "name": "Krowodrza Górka",
+          "lat": 50.0850,
+          "lng": 19.9150,
+          "order": 1
+        },
+        {
+          "stopId": "dworzec-glowny",
+          "name": "Dworzec Główny",
+          "lat": 50.0675,
+          "lng": 19.9452,
+          "order": 5
+        },
+        {
+          "stopId": "main-square",
+          "name": "Rynek Główny",
+          "lat": 50.0619,
+          "lng": 19.9368,
+          "order": 7
+        },
+        {
+          "stopId": "borek-falecki",
+          "name": "Borek Fałęcki",
+          "lat": 50.0200,
+          "lng": 19.8900,
+          "order": 12
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9150, 50.0850],
+          [19.9300, 50.0700],
+          [19.9452, 50.0675],
+          [19.9368, 50.0619],
+          [19.9200, 50.0450],
+          [19.9000, 50.0300],
+          [19.8900, 50.0200]
+        ]
+      }
+    },
+    {
+      "id": "bus-173",
+      "lineNumber": "173",
+      "transportType": "bus",
+      "name": "Os. Piastów - AGH",
+      "color": "#6A4C93",
+      "stops": [
+        {
+          "stopId": "os-piastow",
+          "name": "Os. Piastów",
+          "lat": 50.0955,
+          "lng": 19.9087,
+          "order": 1
+        },
+        {
+          "stopId": "krowodrza-gorka",
+          "name": "Krowodrza Górka",
+          "lat": 50.0850,
+          "lng": 19.9150,
+          "order": 3
+        },
+        {
+          "stopId": "agh",
+          "name": "AGH University",
+          "lat": 50.0657,
+          "lng": 19.9191,
+          "order": 8
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9087, 50.0955],
+          [19.9150, 50.0850],
+          [19.9180, 50.0750],
+          [19.9191, 50.0657]
+        ]
+      }
+    },
+    {
+      "id": "train-ska",
+      "lineNumber": "SKA",
+      "transportType": "train",
+      "name": "Kraków Główny - Wieliczka Rynek",
+      "color": "#E76F51",
+      "stops": [
+        {
+          "stopId": "dworzec-glowny",
+          "name": "Kraków Główny",
+          "lat": 50.0675,
+          "lng": 19.9452,
+          "order": 1
+        },
+        {
+          "stopId": "galeria-krakowska",
+          "name": "Galeria Krakowska",
+          "lat": 50.0686,
+          "lng": 19.9469,
+          "order": 2
+        },
+        {
+          "stopId": "wieliczka-rynek",
+          "name": "Wieliczka Rynek-Kopalnia",
+          "lat": 49.9830,
+          "lng": 20.0640,
+          "order": 8
+        }
+      ],
+      "path": {
+        "type": "LineString",
+        "coordinates": [
+          [19.9452, 50.0675],
+          [19.9469, 50.0686],
+          [19.9700, 50.0650],
+          [20.0000, 50.0500],
+          [20.0300, 50.0200],
+          [20.0640, 49.9830]
+        ]
+      }
+    }
+  ]
+}
