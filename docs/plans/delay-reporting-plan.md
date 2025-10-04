@@ -25,7 +25,7 @@ Create a mobile-first, user-friendly delay reporting system that allows users to
 8. ✅ Mobile-optimized UI with 44px+ touch targets
 
 ### **Enhanced Features** (Should Have - Phase 2)
-1. 📸 Photo upload (max 3 images, 5MB each)
+1. ✅ 📸 Photo upload (max 3 images, 5MB each)
 2. 🎥 Video upload (optional, max 1 video, 20MB)
 3. 🗺️ Suggest nearby transit stops (based on location)
 4. ⏱️ Estimated delay duration input

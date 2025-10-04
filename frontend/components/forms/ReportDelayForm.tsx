@@ -53,13 +53,13 @@ const severityOptions: { value: Severity; label: string; color: string }[] = [
 ];
 
 const categoryOptions: { value: DelayCategory; label: string }[] = [
-  { value: 'mechanical', label: 'Mechanical Issue' },
-  { value: 'signal', label: 'Signal Problem' },
-  { value: 'weather', label: 'Weather Related' },
-  { value: 'accident', label: 'Traffic Accident' },
-  { value: 'crowding', label: 'Overcrowding' },
-  { value: 'staff_shortage', label: 'Staff Shortage' },
-  { value: 'other', label: 'Other' },
+  { value: 'mechanical', label: '🔧 Mechanical Issue' },
+  { value: 'signal', label: '🚦 Signal Problem' },
+  { value: 'weather', label: '🌧️ Weather Related' },
+  { value: 'accident', label: '🚗 Traffic Accident' },
+  { value: 'crowding', label: '👥 Overcrowding' },
+  { value: 'staff_shortage', label: '👷 Staff Shortage' },
+  { value: 'other', label: '❓ Other' },
 ];
 
 export default function ReportDelayForm({ onSubmit, isSubmitting = false, initialLocation }: ReportDelayFormProps) {
@@ -476,53 +476,108 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
             )}
           </div>
 
-          {/* Photo Upload */}
+          {/* Photo Upload - Mobile-First */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Photos (Optional)</Label>
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoUpload}
-                className="hidden"
-                id="photo-upload"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById('photo-upload')?.click()}
-                disabled={photos.length >= 3}
-                className="w-full h-12"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                {photos.length === 0 ? 'Add Photos' : `Add More (${photos.length}/3)`}
-              </Button>
-              
-              {photos.length > 0 && (
+            <Label className="text-sm font-medium">
+              Photos (Optional) 
+              {photos.length > 0 && <span className="text-gray-500 ml-2">{photos.length}/3</span>}
+            </Label>
+            
+            {/* Hidden file inputs */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoUpload}
+              className="hidden"
+              id="photo-camera"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoUpload}
+              className="hidden"
+              id="photo-gallery"
+            />
+            
+            {/* Camera and Gallery Buttons */}
+            {photos.length < 3 && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Take Photo Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('photo-camera')?.click()}
+                  className="h-12 flex flex-col items-center justify-center gap-1 md:hidden"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-xs">Take Photo</span>
+                </Button>
+                
+                {/* Choose from Gallery Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('photo-gallery')?.click()}
+                  className="h-12 flex flex-col items-center justify-center gap-1"
+                >
+                  <Upload className="h-5 w-5" />
+                  <span className="text-xs md:hidden">From Gallery</span>
+                  <span className="text-xs hidden md:inline">Upload Photos</span>
+                </Button>
+                
+                {/* Desktop-only unified button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('photo-gallery')?.click()}
+                  className="h-12 hidden md:flex items-center justify-center col-span-2"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Add Photos ({photos.length}/3)
+                </Button>
+              </div>
+            )}
+            
+            {/* Photo Previews */}
+            {photos.length > 0 && (
+              <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2">
                   {photos.map((photo, index) => (
-                    <div key={index} className="relative">
+                    <div key={index} className="relative group">
                       <img
                         src={URL.createObjectURL(photo)}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-20 object-cover rounded border"
+                        alt={`Photo ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                        className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg hover:bg-red-700 transition-colors"
                         onClick={() => removePhoto(index)}
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                        {index + 1}
+                      </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+                {photos.length >= 3 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    Maximum 3 photos reached
+                  </p>
+                )}
+              </div>
+            )}
+            
+            <p className="text-xs text-gray-500">
+              📸 Add photos to help verify the delay. Max 3 photos, 5MB each.
+            </p>
           </div>
 
           {/* Submit Button */}
