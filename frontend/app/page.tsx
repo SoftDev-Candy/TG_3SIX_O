@@ -37,15 +37,15 @@ export default function Home() {
             Join our community-driven platform to report delays, earn points, and help fellow commuters 
             navigate public transportation with confidence.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/signup">
-              <Button size="lg" className="text-lg">
-                Get Started
+          <div className="flex gap-4 justify-center flex-col sm:flex-row">
+            <Link href="/map">
+              <Button size="lg" className="text-lg w-full sm:w-auto">
+                🗺️ View Live Map
               </Button>
             </Link>
-            <Link href="/map">
-              <Button size="lg" variant="outline" className="text-lg">
-                View Live Map
+            <Link href="/signup">
+              <Button size="lg" variant="outline" className="text-lg w-full sm:w-auto">
+                Sign Up for More Features
               </Button>
             </Link>
           </div>

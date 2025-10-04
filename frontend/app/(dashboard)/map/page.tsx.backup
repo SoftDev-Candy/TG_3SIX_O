@@ -1,0 +1,351 @@
+'use client';
+
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import ReportDelayForm from '@/components/forms/ReportDelayForm';
+import { UserProfile } from '@/components/auth/UserProfile';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  AlertCircle, 
+  TrendingUp, 
+  Users, 
+  Clock,
+  Plus,
+  Filter,
+  Search,
+  Menu,
+  X,
+  MapPin,
+  LogIn,
+  User,
+  Home,
+  Navigation,
+  BarChart3,
+  Crosshair,
+  Activity,
+  UserCircle
+} from 'lucide-react';
+
+// Dynamically import Leaflet map to avoid SSR issues
+const LeafletMap = dynamic(() => import('@/components/map/LeafletMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center">
+      <div className="text-center p-4">
+        <div className="text-6xl mb-4">🗺️</div>
+        <h3 className="text-lg font-semibold mb-2">Loading Map...</h3>
+        <p className="text-gray-600">Initializing Leaflet</p>
+      </div>
+    </div>
+  ),
+});
+
+export default function MapPage() {
+  const [showStats, setShowStats] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState('map');
+  const { user, isAuthenticated } = useAuth();
+
+  const handleReportSubmit = async (data: any) => {
+    // TODO: Implement report submission to API
+    console.log('Report submitted:', data);
+  };
+
+  return (
+    <div className="relative h-screen w-full overflow-hidden">
+      {/* Full Viewport Leaflet Map */}
+      <LeafletMap className="absolute inset-0" />
+      
+      {/* Map Overlay for better button visibility */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+      </div>
+
+      {/* Top Controls - Minimal */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg border border-white/50 hover:bg-white"
+          onClick={() => {
+            // TODO: Implement geolocation
+            console.log('Center map on user location');
+          }}
+        >
+          <Crosshair className="w-4 h-4 mr-1" />
+          <span className="text-xs">My Location</span>
+        </Button>
+      </div>
+
+      {/* Mobile Navigation Menu - Slide up from bottom */}
+      {showMobileMenu && (
+        <div className="absolute bottom-20 left-0 right-0 z-[1001]">
+          <Card className="bg-white/95 backdrop-blur-sm shadow-2xl mx-4 rounded-t-xl">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg">Navigation</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    setActiveTab('map');
+                  }}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <nav className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <Home className="w-5 h-5" />
+                  <span className="font-medium">Dashboard</span>
+                </Link>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <User className="w-5 h-5" />
+                  <span className="font-medium">Profile</span>
+                </Link>
+                <Link
+                  href="/history"
+                  className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <Clock className="w-5 h-5" />
+                  <span className="font-medium">History</span>
+                </Link>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg h-auto justify-start"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter className="w-5 h-5" />
+                  <span className="font-medium">Filters</span>
+                </Button>
+              </nav>
+              
+              {/* Transport Type Quick Filters */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Filters</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  <Button variant="outline" size="sm" className="flex flex-col items-center py-3 h-auto">
+                    <span className="text-lg mb-1">🚌</span>
+                    <span className="text-xs">Bus</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col items-center py-3 h-auto">
+                    <span className="text-lg mb-1">🚊</span>
+                    <span className="text-xs">Tram</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col items-center py-3 h-auto">
+                    <span className="text-lg mb-1">🚆</span>
+                    <span className="text-xs">Train</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex flex-col items-center py-3 h-auto">
+                    <span className="text-lg mb-1">🚇</span>
+                    <span className="text-xs">Metro</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* BOTTOM NAVIGATION BAR */}
+      <div className="absolute bottom-0 left-0 right-0 z-[1000]">
+        <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/50 shadow-2xl">
+          <div className="flex items-center justify-around px-2 py-3">
+            
+            {/* Menu Button */}
+            <Button
+              variant="ghost"
+              className={`flex flex-col items-center justify-center h-16 w-16 rounded-xl transition-all duration-200 ${
+                activeTab === 'menu' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              onClick={() => {
+                setActiveTab('menu');
+                setShowMobileMenu(!showMobileMenu);
+              }}
+            >
+              <Menu className="w-6 h-6 mb-1" />
+              <span className="text-xs font-medium">Menu</span>
+            </Button>
+
+            {/* Report Button - Prominent */}
+            <Modal>
+              <ModalTrigger asChild>
+                <Button
+                  className="flex flex-col items-center justify-center h-16 w-20 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg transition-all duration-200 hover:scale-105"
+                  onClick={() => setActiveTab('report')}
+                >
+                  <AlertCircle className="w-7 h-7 mb-1" />
+                  <span className="text-xs font-bold">Report</span>
+                </Button>
+              </ModalTrigger>
+              <ModalContent className="max-w-md mx-4">
+                <ModalHeader>
+                  <ModalTitle>Report Transit Delay</ModalTitle>
+                </ModalHeader>
+                <ReportDelayForm 
+                  onSubmit={handleReportSubmit}
+                  isSubmitting={false}
+                />
+              </ModalContent>
+            </Modal>
+
+            {/* Delays/Stats Button */}
+            <Button
+              variant="ghost"
+              className={`flex flex-col items-center justify-center h-16 w-16 rounded-xl transition-all duration-200 ${
+                activeTab === 'delays' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              onClick={() => {
+                setActiveTab('delays');
+                setShowStats(!showStats);
+              }}
+            >
+              <Activity className="w-6 h-6 mb-1" />
+              <span className="text-xs font-medium">Delays</span>
+            </Button>
+
+            {/* Profile Button */}
+            <Button
+              variant="ghost"
+              className={`flex flex-col items-center justify-center h-16 w-16 rounded-xl transition-all duration-200 ${
+                activeTab === 'profile' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              onClick={() => {
+                setActiveTab('profile');
+                if (isAuthenticated) {
+                  // TODO: Show profile panel
+                  console.log('Show profile');
+                } else {
+                  window.location.href = '/login';
+                }
+              }}
+            >
+              <UserCircle className="w-6 h-6 mb-1" />
+              <span className="text-xs font-medium">
+                {isAuthenticated ? 'Profile' : 'Login'}
+              </span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delays/Stats Panel - Slide up from bottom */}
+      {showStats && (
+        <div className="absolute bottom-20 left-0 right-0 z-[1001]">
+          <Card className="bg-white/95 backdrop-blur-sm shadow-2xl mx-4 rounded-t-xl">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg">Live Delays & Stats</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowStats(false);
+                    setActiveTab('map');
+                  }}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
+                  <div className="text-2xl font-bold text-red-600">12</div>
+                  <div className="text-sm text-gray-600">Active Delays</div>
+                </div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="text-2xl font-bold text-blue-600">47</div>
+                  <div className="text-sm text-gray-600">Reports Today</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg border border-green-100">
+                  <div className="text-2xl font-bold text-green-600">234</div>
+                  <div className="text-sm text-gray-600">Active Users</div>
+                </div>
+                <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-100">
+                  <div className="text-2xl font-bold text-purple-600">3.2m</div>
+                  <div className="text-sm text-gray-600">Avg Response</div>
+                </div>
+              </div>
+              
+              {/* Severity Legend */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Severity Levels</h4>
+                <div className="flex justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-sm font-medium">Minor (1-5m)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <span className="text-sm font-medium">Moderate (5-15m)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span className="text-sm font-medium">Severe (15m+)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Expandable Filters Panel */}
+      {showFilters && (
+        <div className="absolute top-20 right-4 left-4 z-[1001] md:left-auto md:w-64">
+          <Card className="bg-white/95 backdrop-blur-sm shadow-lg">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm">Filters</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowFilters(false)}
+                  className="h-6 w-6"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Transport Type</label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">All</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">🚌 Bus</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">🚊 Tram</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">🚆 Train</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">🚇 Metro</Badge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Severity</label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">All</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">Minor</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">Moderate</Badge>
+                    <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">Severe</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}

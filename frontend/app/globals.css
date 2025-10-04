@@ -1,6 +1,49 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "daisyui/daisyui.css";
+
+@theme {
+  /* DaisyUI configuration using Tailwind v4 */
+}
+
+/* Set DaisyUI theme */
+:root {
+  color-scheme: light;
+}
+
+[data-theme="travel-guardian-dark"] {
+  color-scheme: dark;
+}
+
+/* DaisyUI custom themes */
+[data-theme="travel-guardian"] {
+  --p: 159 67 69;  /* primary: emerald-600 */
+  --s: 168 73 88;  /* secondary: teal-600 */
+  --a: 214 82 246; /* accent: blue-500 */
+  --n: 217 47 51;  /* neutral: gray-700 */
+  --b1: 0 0 100;   /* base-100: white */
+  --b2: 210 20 98; /* base-200: gray-50 */
+  --b3: 210 14 97; /* base-300: gray-100 */
+  --bc: 222 84 9;  /* base-content: gray-900 */
+  --in: 214 82 246; /* info: blue-500 */
+  --su: 142 69 58;  /* success: green-500 */
+  --wa: 35 95 59;   /* warning: amber-500 */
+  --er: 4 84 56;    /* error: red-500 */
+}
+
+[data-theme="travel-guardian-dark"] {
+  --p: 214 82 246;  /* primary: blue-500 */
+  --s: 243 67 251;  /* secondary: indigo-500 */
+  --a: 159 67 81;   /* accent: emerald-500 */
+  --n: 215 20 92;   /* neutral: slate-400 */
+  --b1: 222 47 21;  /* base-100: slate-800 */
+  --b2: 215 25 33;  /* base-200: slate-700 */
+  --b3: 215 19 47;  /* base-300: slate-600 */
+  --bc: 210 14 97;  /* base-content: slate-100 */
+  --in: 214 82 246; /* info: blue-500 */
+  --su: 159 67 81;  /* success: emerald-500 */
+  --wa: 35 95 59;   /* warning: amber-500 */
+  --er: 4 84 71;    /* error: red-400 */
+}
 
 /* Leaflet map styles */
 .leaflet-container {
@@ -31,143 +74,19 @@
   font-weight: bold !important;
 }
 
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+/* Custom transport type colors for markers */
+.transport-bus {
+  color: oklch(var(--p));
 }
 
-:root {
-  --radius: 0.625rem;
-  
-  /* TG-3SIX-O Urban Green Duo/Tri-tone Theme - Light Mode */
-  --primary-emerald: #059669;
-  --secondary-gray: #374151;
-  --accent-teal: #0d9488;
-  
-  /* Semantic Colors */
-  --success-green: #22c55e;
-  --warning-amber: #f59e0b;
-  --danger-red: #ef4444;
-  
-  /* Neutral Grays */
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-200: #e2e8f0;
-  --gray-600: #475569;
-  --gray-900: #0f172a;
-  
-  /* Transport Type Colors - Urban Green Theme */
-  --transport-bus: var(--primary-emerald);
-  --transport-tram: var(--accent-teal);
-  --transport-train: var(--secondary-gray);
-  --transport-metro: #1f2937;
-  
-  /* Shadcn/ui mappings */
-  --background: var(--gray-50);
-  --foreground: var(--gray-900);
-  --card: #ffffff;
-  --card-foreground: var(--gray-900);
-  --popover: #ffffff;
-  --popover-foreground: var(--gray-900);
-  --primary: var(--primary-emerald);
-  --primary-foreground: #ffffff;
-  --secondary: var(--gray-100);
-  --secondary-foreground: var(--secondary-gray);
-  --muted: var(--gray-100);
-  --muted-foreground: var(--gray-600);
-  --accent: var(--accent-teal);
-  --accent-foreground: #ffffff;
-  --destructive: var(--danger-red);
-  --border: var(--gray-200);
-  --input: var(--gray-200);
-  --ring: var(--primary-emerald);
+.transport-tram {
+  color: oklch(var(--s));
 }
 
-.dark {
-  /* TG-3SIX-O Dark Mode Colors */
-  --primary-blue: #3b82f6;
-  --primary-gray: #94a3b8;
-  --accent-indigo: #6366f1;
-  
-  /* Semantic Colors (Dark Mode) */
-  --success-green: #10b981;
-  --warning-amber: #f59e0b;
-  --danger-red: #f87171;
-  
-  /* Dark Neutral Grays */
-  --gray-50: #1e293b;
-  --gray-100: #334155;
-  --gray-200: #475569;
-  --gray-600: #cbd5e1;
-  --gray-900: #f1f5f9;
-  
-  /* Transport Type Colors (Dark Mode) */
-  --transport-bus: var(--primary-blue);
-  --transport-tram: var(--accent-indigo);
-  --transport-train: var(--primary-gray);
-  --transport-metro: var(--gray-900);
-  
-  /* Shadcn/ui mappings for dark mode */
-  --background: var(--gray-50);
-  --foreground: var(--gray-900);
-  --card: var(--gray-100);
-  --card-foreground: var(--gray-900);
-  --popover: var(--gray-100);
-  --popover-foreground: var(--gray-900);
-  --primary: var(--primary-blue);
-  --primary-foreground: #ffffff;
-  --secondary: var(--gray-100);
-  --secondary-foreground: var(--gray-600);
-  --muted: var(--gray-100);
-  --muted-foreground: var(--gray-600);
-  --accent: var(--accent-indigo);
-  --accent-foreground: #ffffff;
-  --destructive: var(--danger-red);
-  --border: var(--gray-200);
-  --input: var(--gray-200);
-  --ring: var(--primary-blue);
+.transport-train {
+  color: oklch(var(--n));
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+.transport-metro {
+  color: oklch(var(--a));
 }
