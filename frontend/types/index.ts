@@ -18,7 +18,7 @@ export interface Location {
 }
 
 // Delay Report types
-export type TransportType = 'bus' | 'train' | 'metro' | 'tram';
+export type TransportType = 'bus' | 'tram' | 'train' | 'metro' | 'ferry';
 export type Severity = 'minor' | 'moderate' | 'severe';
 export type ReportStatus = 'pending' | 'verified' | 'resolved' | 'rejected';
 export type DelayCategory = 
@@ -77,6 +77,22 @@ export interface Route {
   calculatedAt: string;
 }
 
+// Voting types
+export interface Vote {
+  id: string;
+  userId: string;
+  reportId: string;
+  type: 'upvote' | 'downvote';
+  createdAt: string;
+}
+
+export interface VoteStats {
+  upvotes: number;
+  downvotes: number;
+  userVote?: 'upvote' | 'downvote' | null;
+  netScore: number;
+}
+
 // Points & Gamification
 export interface PointsTransaction {
   id: string;
@@ -85,6 +101,13 @@ export interface PointsTransaction {
   reason: string;
   relatedReportId?: string;
   createdAt: string;
+}
+
+export interface PointsCalculation {
+  basePoints: number; // 1 for submission
+  upvoteBonus: number; // 1 per upvote
+  firstReporterBonus: number; // extra points for being first
+  total: number;
 }
 
 export interface Reward {

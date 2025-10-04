@@ -8,6 +8,8 @@ import type {
   PaginatedResponse,
   PointsTransaction,
   Reward,
+  Vote,
+  VoteStats,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -152,11 +154,20 @@ class ApiClient {
     return this.request<DelayReport>(`/api/reports/${id}`);
   }
 
-  async voteReport(id: string, vote: 'up' | 'down') {
-    return this.request<DelayReport>(`/api/reports/${id}/vote`, {
+  async voteReport(id: string, voteType: 'upvote' | 'downvote') {
+    return this.request<{ report: DelayReport; voteStats: VoteStats }>(`/api/reports/${id}/vote`, {
       method: 'PATCH',
-      body: JSON.stringify({ vote }),
+      body: JSON.stringify({ voteType }),
     });
+  }
+
+  async getReportVoteStats(id: string) {
+    return this.request<VoteStats>(`/api/reports/${id}/votes`);
+  }
+
+  async getUserVotes(userId?: string) {
+    const endpoint = userId ? `/api/votes/user/${userId}` : '/api/votes/me';
+    return this.request<PaginatedResponse<Vote>>(endpoint);
   }
 
   async deleteReport(id: string) {

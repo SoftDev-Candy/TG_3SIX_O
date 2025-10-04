@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { 
   MapPin, 
   FileText, 
@@ -86,6 +87,7 @@ export default function DashboardLayout({
                   <Trophy className="w-3 h-3" />
                   {user.points} pts
                 </Badge>
+                <ThemeToggle />
                 <Avatar>
                   <AvatarFallback className="bg-indigo-600 text-white">
                     {user.username[0].toUpperCase()}

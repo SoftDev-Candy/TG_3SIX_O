@@ -1,9 +1,37 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@custom-variant dark (&:is(.dark *));
+/* Leaflet map styles */
+.leaflet-container {
+  height: 100vh;
+  width: 100vw;
+}
 
-@theme inline {
+/* Custom delay marker styles */
+.custom-delay-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Ensure Leaflet controls are mobile-friendly */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  border: none !important;
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+}
+
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -45,71 +73,94 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  
+  /* TG-3SIX-O Urban Green Duo/Tri-tone Theme - Light Mode */
+  --primary-emerald: #059669;
+  --secondary-gray: #374151;
+  --accent-teal: #0d9488;
+  
+  /* Semantic Colors */
+  --success-green: #22c55e;
+  --warning-amber: #f59e0b;
+  --danger-red: #ef4444;
+  
+  /* Neutral Grays */
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-600: #475569;
+  --gray-900: #0f172a;
+  
+  /* Transport Type Colors - Urban Green Theme */
+  --transport-bus: var(--primary-emerald);
+  --transport-tram: var(--accent-teal);
+  --transport-train: var(--secondary-gray);
+  --transport-metro: #1f2937;
+  
+  /* Shadcn/ui mappings */
+  --background: var(--gray-50);
+  --foreground: var(--gray-900);
+  --card: #ffffff;
+  --card-foreground: var(--gray-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--gray-900);
+  --primary: var(--primary-emerald);
+  --primary-foreground: #ffffff;
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--secondary-gray);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-600);
+  --accent: var(--accent-teal);
+  --accent-foreground: #ffffff;
+  --destructive: var(--danger-red);
+  --border: var(--gray-200);
+  --input: var(--gray-200);
+  --ring: var(--primary-emerald);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* TG-3SIX-O Dark Mode Colors */
+  --primary-blue: #3b82f6;
+  --primary-gray: #94a3b8;
+  --accent-indigo: #6366f1;
+  
+  /* Semantic Colors (Dark Mode) */
+  --success-green: #10b981;
+  --warning-amber: #f59e0b;
+  --danger-red: #f87171;
+  
+  /* Dark Neutral Grays */
+  --gray-50: #1e293b;
+  --gray-100: #334155;
+  --gray-200: #475569;
+  --gray-600: #cbd5e1;
+  --gray-900: #f1f5f9;
+  
+  /* Transport Type Colors (Dark Mode) */
+  --transport-bus: var(--primary-blue);
+  --transport-tram: var(--accent-indigo);
+  --transport-train: var(--primary-gray);
+  --transport-metro: var(--gray-900);
+  
+  /* Shadcn/ui mappings for dark mode */
+  --background: var(--gray-50);
+  --foreground: var(--gray-900);
+  --card: var(--gray-100);
+  --card-foreground: var(--gray-900);
+  --popover: var(--gray-100);
+  --popover-foreground: var(--gray-900);
+  --primary: var(--primary-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--gray-600);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-600);
+  --accent: var(--accent-indigo);
+  --accent-foreground: #ffffff;
+  --destructive: var(--danger-red);
+  --border: var(--gray-200);
+  --input: var(--gray-200);
+  --ring: var(--primary-blue);
 }
 
 @layer base {
