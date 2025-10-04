@@ -4,14 +4,19 @@ from google.transit import gtfs_realtime_pb2
 import folium
 from streamlit_folium import st_folium
 
+# ----------------------------
+# Configuration
+# ----------------------------
 st.set_page_config(page_title="Kraków Public Transport Live Map", layout="wide")
 st.title("🚌 Kraków Bus & Tram Live Tracker")
 
 VEHICLE_POSITIONS_URL = "https://gtfs.ztp.krakow.pl/VehiclePositions.pb"
 TRIP_UPDATES_URL = "https://gtfs.ztp.krakow.pl/TripUpdates.pb"
-
 REFRESH_INTERVAL = 60  # seconds
 
+# ----------------------------
+# Data Fetching
+# ----------------------------
 @st.cache_resource(ttl=REFRESH_INTERVAL)
 def fetch_feed(url: str) -> gtfs_realtime_pb2.FeedMessage:
     feed = gtfs_realtime_pb2.FeedMessage()
@@ -56,6 +61,9 @@ def load_vehicle_data() -> list[dict]:
             })
     return vehicles
 
+# ----------------------------
+# Utilities
+# ----------------------------
 def delay_color(delay: int | None) -> str:
     if delay is None:
         return "gray"
@@ -72,43 +80,18 @@ def format_delay(delay: int | None) -> str:
     sign = "+" if minutes > 0 else ""
     return f"{sign}{minutes} min"
 
-def main():
-    st.sidebar.header("Options")
-    # Manual refresh button
-    if st.sidebar.button("Refresh Map Now"):
-        st.experimental_rerun()  # remove this entirely for old Streamlit
-
-    st.sidebar.caption(f"Map auto-refreshes every {REFRESH_INTERVAL} seconds.")
-
-    vehicles = load_vehicle_data()
-
-    # Single-route selection dropdown
-    st.sidebar.header("Select a Route")
-    all_routes = sorted(set(v["route"] for v in vehicles))
-    route_option = st.sidebar.selectbox(
-        "Route to display",
-        options=["All"] + all_routes,
-        index=0
-    )
-
-    if route_option != "All":
-        vehicles = [v for v in vehicles if v["route"] == route_option]
-
-    # Center map on Kraków
-    m = folium.Map(location=[50.0647, 19.945], zoom_start=12)
-
+def add_vehicle_markers(m: folium.Map, vehicles: list[dict]):
     for v in vehicles:
-        color = delay_color(v["delay"])
         folium.CircleMarker(
             location=[v["lat"], v["lon"]],
             radius=5,
-            color=color,
+            color=delay_color(v["delay"]),
             fill=True,
             fill_opacity=0.8,
             popup=f"Bus/Tram {v['id']}<br>Route {v['route']}<br>Delay: {format_delay(v['delay'])}"
         ).add_to(m)
 
-    # Add legend
+def add_legend(m: folium.Map):
     legend_html = """
     <div style="position: fixed; 
                 bottom: 50px; left: 50px; width: 150px; height: 110px; 
@@ -122,6 +105,35 @@ def main():
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
+
+# ----------------------------
+# Main Application
+# ----------------------------
+def main():
+    # Sidebar: manual refresh
+    st.sidebar.header("Options")
+    if st.sidebar.button("Refresh Map Now"):
+        st.experimental_rerun()  # For old Streamlit, remove if unsupported
+    st.sidebar.caption(f"Data cached for {REFRESH_INTERVAL} seconds")
+
+    vehicles = load_vehicle_data()
+
+    # Sidebar: select route
+    st.sidebar.header("Select a Route")
+    all_routes = sorted(set(v["route"] for v in vehicles))
+    route_option = st.sidebar.selectbox(
+        "Route to display",
+        options=["All"] + all_routes,
+        index=0
+    )
+
+    if route_option != "All":
+        vehicles = [v for v in vehicles if v["route"] == route_option]
+
+    # Map
+    m = folium.Map(location=[50.0647, 19.945], zoom_start=12)
+    add_vehicle_markers(m, vehicles)
+    add_legend(m)
 
     st_folium(m, width=1000, height=700)
     st.caption("Data: Zarząd Transportu Publicznego w Krakowie (GTFS Realtime)")
