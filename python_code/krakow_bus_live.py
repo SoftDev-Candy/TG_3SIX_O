@@ -1,3 +1,4 @@
+import time
 import requests
 import streamlit as st
 from google.transit import gtfs_realtime_pb2
@@ -10,7 +11,9 @@ st.title("🚌 Kraków Bus & Tram Live Tracker")
 VEHICLE_POSITIONS_URL = "https://gtfs.ztp.krakow.pl/VehiclePositions.pb"
 TRIP_UPDATES_URL = "https://gtfs.ztp.krakow.pl/TripUpdates.pb"
 
-@st.cache_resource(ttl=60)
+REFRESH_INTERVAL = 60  # seconds
+
+@st.cache_resource(ttl=REFRESH_INTERVAL)
 def fetch_feed(url: str) -> gtfs_realtime_pb2.FeedMessage:
     """Fetch and parse a GTFS Realtime protobuf feed."""
     feed = gtfs_realtime_pb2.FeedMessage()
@@ -23,7 +26,6 @@ def fetch_feed(url: str) -> gtfs_realtime_pb2.FeedMessage:
     return feed
 
 def get_trip_delays() -> dict[str, int | None]:
-    """Extract delays for trips from the TripUpdates feed."""
     trip_data = {}
     trip_feed = fetch_feed(TRIP_UPDATES_URL)
     for entity in trip_feed.entity:
@@ -39,7 +41,6 @@ def get_trip_delays() -> dict[str, int | None]:
     return trip_data
 
 def load_vehicle_data() -> list[dict]:
-    """Load vehicle positions and associate them with trip delays."""
     trip_delays = get_trip_delays()
     vehicle_feed = fetch_feed(VEHICLE_POSITIONS_URL)
     vehicles = []
@@ -74,32 +75,31 @@ def format_delay(delay: int | None) -> str:
     return f"{sign}{minutes} min"
 
 def main():
-    """Render the Kraków public transport live map."""
+    st.sidebar.header("Options")
 
     # Manual refresh button
-    st.sidebar.header("Options")
-    st.sidebar.button("Refresh Map")
-    st.sidebar.caption("Click to refresh. Data cached for 60 seconds.")
+    if st.sidebar.button("Refresh Map Now"):
+        st.experimental_rerun()
+
+    st.sidebar.caption(f"Map auto-refreshes every {REFRESH_INTERVAL} seconds.")
 
     vehicles = load_vehicle_data()
 
-    # Sidebar: select single route or All
+    # Single-route selection dropdown
     st.sidebar.header("Select a Route")
     all_routes = sorted(set(v["route"] for v in vehicles))
     route_option = st.sidebar.selectbox(
         "Route to display",
         options=["All"] + all_routes,
-        index=0  # default to "All"
+        index=0
     )
 
-    # Filter vehicles
     if route_option != "All":
         vehicles = [v for v in vehicles if v["route"] == route_option]
 
     # Center map on Kraków
     m = folium.Map(location=[50.0647, 19.945], zoom_start=12)
 
-    # Add vehicle markers
     for v in vehicles:
         color = delay_color(v["delay"])
         folium.CircleMarker(
@@ -111,7 +111,7 @@ def main():
             popup=f"Bus/Tram {v['id']}<br>Route {v['route']}<br>Delay: {format_delay(v['delay'])}"
         ).add_to(m)
 
-    # Add legend
+    # Legend
     legend_html = """
     <div style="position: fixed; 
                 bottom: 50px; left: 50px; width: 150px; height: 110px; 
@@ -128,6 +128,10 @@ def main():
 
     st_folium(m, width=1000, height=700)
     st.caption("Data: Zarząd Transportu Publicznego w Krakowie (GTFS Realtime)")
+
+    # Automatic refresh after map renders
+    time.sleep(REFRESH_INTERVAL)
+    st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
