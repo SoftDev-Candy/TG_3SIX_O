@@ -46,6 +46,16 @@ compile_commands.json
 *.VC.db
 *.VC.VC.opendb
 
+
+# ----------------------
+# IDE
+# ----------------------
+.windsurf/
+*.swp
+*.swo
+*~
+
+
 # ----------------------
 # CLion / JetBrains
 # ----------------------
