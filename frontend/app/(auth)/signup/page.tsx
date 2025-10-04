@@ -50,6 +50,11 @@ export default function SignupPage() {
     }
   };
 
+  const handleSkipSignup = () => {
+    // Allow users to continue without signup (guest mode)
+    router.push('/map');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
@@ -130,6 +135,27 @@ export default function SignupPage() {
             >
               {isLoading ? 'Creating account...' : 'Sign up'}
             </Button>
+            
+            {/* Optional Signup - Skip to continue as guest */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+            
+            <Button 
+              type="button"
+              variant="outline" 
+              className="w-full" 
+              onClick={handleSkipSignup}
+              disabled={isLoading}
+            >
+              Continue as Guest
+            </Button>
+            
             <p className="text-sm text-center text-gray-600">
               Already have an account?{' '}
               <Link href="/login" className="text-indigo-600 hover:underline font-medium">

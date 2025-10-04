@@ -90,6 +90,13 @@ class ApiClient {
     });
   }
 
+  async loginWithUsername(username: string, password: string) {
+    return this.request<{ user: User; token: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  }
+
   async logout() {
     const result = await this.request('/api/auth/logout', { method: 'POST' });
     this.setToken(null);

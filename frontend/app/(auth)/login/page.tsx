@@ -11,10 +11,11 @@ import { apiClient } from '@/lib/api-client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [loginField, setLoginField] = useState(''); // Can be email or username
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loginType, setLoginType] = useState<'email' | 'username'>('email');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await apiClient.login(email, password);
+      // Determine if loginField is email or username based on format
+      const isEmail = loginField.includes('@');
+      const result = isEmail 
+        ? await apiClient.login(loginField, password)
+        : await apiClient.loginWithUsername(loginField, password);
       
       if (result.success && result.data) {
         apiClient.setToken(result.data.token);
@@ -35,6 +40,11 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkipLogin = () => {
+    // Allow users to continue without login (guest mode)
+    router.push('/map');
   };
 
   return (
@@ -59,16 +69,19 @@ export default function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="loginField">Email or Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="loginField"
+                type="text"
+                placeholder="you@example.com or username"
+                value={loginField}
+                onChange={(e) => setLoginField(e.target.value)}
                 required
                 disabled={isLoading}
               />
+              <p className="text-xs text-gray-500">
+                Use your email address or username to sign in
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -91,6 +104,27 @@ export default function LoginPage() {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
+            
+            {/* Optional Login - Skip to continue as guest */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+            
+            <Button 
+              type="button"
+              variant="outline" 
+              className="w-full" 
+              onClick={handleSkipLogin}
+              disabled={isLoading}
+            >
+              Continue as Guest
+            </Button>
+            
             <p className="text-sm text-center text-gray-600">
               Don&apos;t have an account?{' '}
               <Link href="/signup" className="text-indigo-600 hover:underline font-medium">
