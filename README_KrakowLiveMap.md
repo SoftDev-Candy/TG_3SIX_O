@@ -36,7 +36,7 @@ pip install -r requirements.txt
 
 5. Run the app:
 ```
-python -m streamlit run python_code/krakow_bus_live.py
+ python -m streamlit run .\python_code\krakow_bus_live\app.py
 ```
 
 ## Usage
