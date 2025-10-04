@@ -3,34 +3,41 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loginField, setLoginField] = useState(''); // Can be email or username
-  const [password, setPassword] = useState('');
+  const { login, loginWithUsername } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [loginType, setLoginType] = useState<'email' | 'username'>('email');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     setError('');
     setIsLoading(true);
 
     try {
       // Determine if loginField is email or username based on format
-      const isEmail = loginField.includes('@');
+      const isEmail = data.loginField.includes('@');
       const result = isEmail 
-        ? await apiClient.login(loginField, password)
-        : await apiClient.loginWithUsername(loginField, password);
+        ? await login(data.loginField, data.password)
+        : await loginWithUsername(data.loginField, data.password);
       
-      if (result.success && result.data) {
-        apiClient.setToken(result.data.token);
+      if (result.success) {
         router.push('/map');
       } else {
         setError(result.error || 'Login failed');
@@ -61,7 +68,7 @@ export default function LoginPage() {
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
@@ -74,11 +81,12 @@ export default function LoginPage() {
                 id="loginField"
                 type="text"
                 placeholder="you@example.com or username"
-                value={loginField}
-                onChange={(e) => setLoginField(e.target.value)}
-                required
+                {...register('loginField')}
                 disabled={isLoading}
               />
+              {errors.loginField && (
+                <p className="text-xs text-red-600">{errors.loginField.message}</p>
+              )}
               <p className="text-xs text-gray-500">
                 Use your email address or username to sign in
               </p>
@@ -89,11 +97,12 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                {...register('password')}
                 disabled={isLoading}
               />
+              {errors.password && (
+                <p className="text-xs text-red-600">{errors.password.message}</p>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">

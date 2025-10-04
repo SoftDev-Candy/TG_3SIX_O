@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { UserProfile } from '@/components/auth/UserProfile';
+import { OptionalAuth } from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   MapPin, 
   FileText, 
@@ -14,7 +17,8 @@ import {
   Trophy,
   History,
   Menu,
-  X
+  X,
+  LogIn
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -34,18 +38,14 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
   
   // Check if current page is full viewport (like map)
   const isFullViewport = pathname === '/map';
 
-  // Mock user data - will be replaced with real data from API
-  const user = {
-    username: 'demo_user',
-    points: 0,
-  };
-
   return (
-    <div className={isFullViewport ? "h-screen overflow-hidden" : "min-h-screen bg-gray-50"}>
+    <OptionalAuth>
+      <div className={isFullViewport ? "h-screen overflow-hidden" : "min-h-screen bg-gray-50"}>
       {/* Top Navigation Bar - Hidden on full viewport pages */}
       {!isFullViewport && (
         <header className="bg-white border-b sticky top-0 z-50">
@@ -83,16 +83,26 @@ export default function DashboardLayout({
 
               {/* User Menu */}
               <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
-                  <Trophy className="w-3 h-3" />
-                  {user.points} pts
-                </Badge>
-                <ThemeToggle />
-                <Avatar>
-                  <AvatarFallback className="bg-indigo-600 text-white">
-                    {user.username[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                {isAuthenticated && user ? (
+                  <>
+                    <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
+                      <Trophy className="w-3 h-3" />
+                      {user.points} pts
+                    </Badge>
+                    <ThemeToggle />
+                    <UserProfile variant="mini" showLogout={false} />
+                  </>
+                ) : (
+                  <>
+                    <ThemeToggle />
+                    <Link href="/login">
+                      <Button variant="outline" size="sm" className="hidden sm:flex">
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Sign In
+                      </Button>
+                    </Link>
+                  </>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -128,14 +138,29 @@ export default function DashboardLayout({
                     </Link>
                   );
                 })}
+                
+                {/* Mobile Auth Actions */}
+                {!isAuthenticated && (
+                  <div className="border-t pt-2 mt-2">
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      Sign In
+                    </Link>
+                  </div>
+                )}
               </nav>
             </div>
           )}
         </header>
       )}
 
-      {/* Main Content */}
-      <main className={isFullViewport ? "h-full" : ""}>{children}</main>
-    </div>
+        {/* Main Content */}
+        <main className={isFullViewport ? "h-full" : ""}>{children}</main>
+      </div>
+    </OptionalAuth>
   );
 }

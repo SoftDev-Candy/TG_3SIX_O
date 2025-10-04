@@ -51,16 +51,15 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
 
 ### Forms & Validation
 - **React Hook Form** - Form management
-- **Zod** - Schema validation
 
 ---
 
 ## Key Features
 
 ### 1. User Authentication & Profiles
-- [ ] Sign up / Login (email, social auth)
-- [ ] User profile with points balance
-- [ ] Contribution history
+- [x] Sign up / Login (email, social auth)
+- [x] User profile with points balance
+- [x] Contribution history
 
 ### 2. Delay Reporting
 - [ ] Quick report form (location, line, severity, description)
