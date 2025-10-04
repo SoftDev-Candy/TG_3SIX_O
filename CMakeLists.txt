@@ -54,7 +54,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM BEFORE PRIVATE ${CMAKE_SOURCE_
 
 # Link Threads
 find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads ${PLATFORM_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads 
+${PLATFORM_LIBS})
 
 # Provide helpful compile definitions (optional)
 # target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -63,6 +64,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads ${PLATFORM_LIBS})
 if (WIN32)
   message(STATUS "Configuring for Windows. If you don't have Visual Studio, you can use MSYS2/mingw or Ninja generator.")
 endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+
 
 message(STATUS "Project: ${PROJECT_NAME}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
