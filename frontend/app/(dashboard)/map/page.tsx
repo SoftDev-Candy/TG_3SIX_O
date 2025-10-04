@@ -121,30 +121,29 @@ export default function MapPage() {
                     setShowMobileMenu(false);
                   }}
                 >
-                  <Filter className="w-5 h-5" />
                   Filters
                 </button>
               </nav>
               
               {/* Transport Type Quick Filters */}
-              <div className="mt-4 pt-4 border-t border-base-300">
-                <h4 className="text-sm font-medium mb-3">Quick Filters</h4>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Filters</h4>
                 <div className="grid grid-cols-4 gap-2">
-                  <button className="btn btn-outline btn-sm flex-col h-auto py-3">
-                    <span className="text-lg mb-1">🚌</span>
-                    <span className="text-xs">Bus</span>
+                  <button className="flex flex-col items-center justify-center gap-1 py-3 px-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                    <span className="text-2xl">🚌</span>
+                    <span className="text-xs font-medium">Bus</span>
                   </button>
-                  <button className="btn btn-outline btn-sm flex-col h-auto py-3">
-                    <span className="text-lg mb-1">🚊</span>
-                    <span className="text-xs">Tram</span>
+                  <button className="flex flex-col items-center justify-center gap-1 py-3 px-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                    <span className="text-2xl">🚊</span>
+                    <span className="text-xs font-medium">Tram</span>
                   </button>
-                  <button className="btn btn-outline btn-sm flex-col h-auto py-3">
-                    <span className="text-lg mb-1">🚆</span>
-                    <span className="text-xs">Train</span>
+                  <button className="flex flex-col items-center justify-center gap-1 py-3 px-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                    <span className="text-2xl">🚆</span>
+                    <span className="text-xs font-medium">Train</span>
                   </button>
-                  <button className="btn btn-outline btn-sm flex-col h-auto py-3">
-                    <span className="text-lg mb-1">🚇</span>
-                    <span className="text-xs">Metro</span>
+                  <button className="flex flex-col items-center justify-center gap-1 py-3 px-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                    <span className="text-2xl">🚇</span>
+                    <span className="text-xs font-medium">Metro</span>
                   </button>
                 </div>
               </div>
@@ -223,9 +222,7 @@ export default function MapPage() {
             }}
           >
             <UserCircle className="w-6 h-6 mb-1" />
-            <span className="text-xs font-medium">
-              {isAuthenticated ? 'Profile' : 'Login'}
-            </span>
+            <span className="text-xs font-medium">Profile</span>
           </button>
         </div>
       </div>

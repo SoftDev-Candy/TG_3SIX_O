@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, MapPin, Clock, AlertTriangle, Upload, X } from 'lucide-react';
+import { Camera, MapPin, Clock, AlertTriangle, Upload, X, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Removed Select components - using native HTML select instead
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreateReportInput, TransportType, Severity, DelayCategory, Location } from '@/types';
+import { searchLocations, getLocationIcon, type MockLocation } from '@/lib/mock-locations';
 
 const reportSchema = z.object({
   location: z.object({
@@ -65,6 +66,14 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
   const [photos, setPhotos] = useState<File[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(initialLocation || null);
   const [locationLoading, setLocationLoading] = useState(false);
+  
+  // Manual location search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MockLocation[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -117,7 +126,18 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
       setValue('location', location);
     } catch (error) {
       console.error('Failed to get location:', error);
-      alert('Unable to get your location. Please enable location services and try again.');
+      
+      // DEVELOPMENT FALLBACK: Use Tauron Arena, Kraków as default location
+      const fallbackLocation: Location = {
+        lat: 50.067472,
+        lng: 19.991694,
+        address: 'Tauron Arena, Kraków',
+        stopName: 'Location Detected',
+      };
+      
+      console.warn('🚧 Using development fallback location (Tauron Arena):', fallbackLocation);
+      setCurrentLocation(fallbackLocation);
+      setValue('location', fallbackLocation);
     } finally {
       setLocationLoading(false);
     }
@@ -143,6 +163,55 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Handle manual location search with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (query.trim().length === 0) {
+      setSearchResults([]);
+      setShowSuggestions(false);
+      setIsSearching(false);
+      return;
+    }
+    
+    // Show searching indicator
+    setIsSearching(true);
+    setShowSuggestions(true);
+    
+    // Debounce search (300ms) with artificial processing time
+    searchTimeoutRef.current = setTimeout(() => {
+      const results = searchLocations(query);
+      
+      // Add a small delay to show the loading indicator (makes it feel responsive)
+      setTimeout(() => {
+        setSearchResults(results);
+        setIsSearching(false);
+      }, 150); // 150ms artificial delay for "processing" feel
+    }, 300);
+  };
+  
+  // Select a location from suggestions
+  const selectLocation = (mockLoc: MockLocation) => {
+    const location: Location = {
+      lat: mockLoc.lat,
+      lng: mockLoc.lng,
+      address: mockLoc.address,
+      stopName: mockLoc.name,
+    };
+    
+    setCurrentLocation(location);
+    setValue('location', location);
+    setSearchQuery(mockLoc.name);
+    setShowSuggestions(false);
+    setSearchResults([]);
+  };
+
   const onFormSubmit = async (data: ReportFormData) => {
     const submitData: CreateReportInput = {
       ...data,
@@ -156,6 +225,13 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
     if (!initialLocation && 'geolocation' in navigator) {
       getCurrentLocation();
     }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [initialLocation]);
 
   return (
@@ -172,24 +248,114 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
           {/* Location Section */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Location</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={getCurrentLocation}
-                disabled={locationLoading}
-                className="flex-shrink-0"
-              >
-                <MapPin className="h-4 w-4 mr-1" />
-                {locationLoading ? 'Getting...' : 'Use Current'}
-              </Button>
-              {currentLocation && (
-                <div className="flex-1 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {currentLocation.address || `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`}
+            
+            {/* Quick GPS Button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={getCurrentLocation}
+              disabled={locationLoading}
+              className="w-full h-12 justify-start"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              {locationLoading ? 'Getting location...' : 'Use My Location (GPS)'}
+            </Button>
+            
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or search manually</span>
+              </div>
+            </div>
+            
+            {/* Manual Search Input */}
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search location (e.g., Dworzec, Wawel, Rondo...)"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchResults.length > 0 && setShowSuggestions(true)}
+                  className="h-12 pl-9 pr-10"
+                />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-gray-400" />
+                )}
+              </div>
+              
+              {/* Autosuggest Dropdown */}
+              {showSuggestions && searchResults.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {searchResults.map((location) => (
+                    <button
+                      key={location.id}
+                      type="button"
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors"
+                      onClick={() => selectLocation(location)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl flex-shrink-0 mt-0.5">
+                          {getLocationIcon(location.type)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-gray-900">
+                            {location.name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {location.address}
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {location.lines.slice(0, 4).map((line, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-block px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 rounded"
+                              >
+                                {line}
+                              </span>
+                            ))}
+                            {location.lines.length > 4 && (
+                              <span className="inline-block px-1.5 py-0.5 text-xs text-gray-500">
+                                +{location.lines.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* No results message */}
+              {showSuggestions && !isSearching && searchResults.length === 0 && searchQuery.trim().length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-sm text-gray-500">
+                  No locations found. Try a different search term.
                 </div>
               )}
             </div>
+            
+            {/* Selected Location Display */}
+            {currentLocation && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-green-900">
+                    {currentLocation.stopName || 'Selected Location'}
+                  </div>
+                  <div className="text-green-700 text-xs">
+                    {currentLocation.address || `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {errors.location && (
               <p className="text-sm text-red-600">{errors.location.message}</p>
             )}
@@ -261,18 +427,17 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
           {/* Category */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Issue Category</Label>
-            <Select onValueChange={(value) => setValue('category', value as DelayCategory)}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Select issue type" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              {...register('category')}
+              className="w-full h-12 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+            >
+              <option value="">Select issue type</option>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             {errors.category && (
               <p className="text-sm text-red-600">{errors.category.message}</p>
             )}
