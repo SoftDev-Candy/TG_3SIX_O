@@ -23,9 +23,9 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map centered on a default location (can be changed to user's location)
+    // Initialize map centered on Kraków (Tauron Arena area)
     const map = L.map(mapRef.current, {
-      center: [52.5200, 13.4050], // Berlin coordinates as default
+      center: [50.067472, 19.991694], // Tauron Arena, Kraków
       zoom: 13,
       zoomControl: false, // We'll add custom controls
     });
@@ -43,12 +43,12 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
 
     // Sample public transport delay markers (will be replaced with real data)
     const sampleDelays = [
-      { lat: 52.5200, lng: 13.4050, severity: 'severe', type: 'bus', description: 'Bus 100 - 15min delay', line: '100' },
-      { lat: 52.5100, lng: 13.3900, severity: 'moderate', type: 'tram', description: 'Tram M1 - 8min delay', line: 'M1' },
-      { lat: 52.5300, lng: 13.4200, severity: 'minor', type: 'train', description: 'S-Bahn S1 - 3min delay', line: 'S1' },
-      { lat: 52.5150, lng: 13.4100, severity: 'moderate', type: 'metro', description: 'U-Bahn U6 - 5min delay', line: 'U6' },
-      { lat: 52.5250, lng: 13.3950, severity: 'severe', type: 'tram', description: 'Tram 12 - 12min delay', line: '12' },
-      { lat: 52.5080, lng: 13.4150, severity: 'minor', type: 'bus', description: 'Bus 200 - 2min delay', line: '200' },
+      { lat: 50.0675, lng: 19.9452, severity: 'severe', type: 'bus', description: 'Bus 52 - 15min delay', line: '52' },
+      { lat: 50.0619, lng: 19.9368, severity: 'moderate', type: 'tram', description: 'Tram 8 - 8min delay', line: '8' },
+      { lat: 50.0686, lng: 19.9469, severity: 'minor', type: 'train', description: 'Train to Wieliczka - 3min delay', line: 'SKA' },
+      { lat: 50.0693, lng: 19.9534, severity: 'moderate', type: 'tram', description: 'Tram 10 - 5min delay', line: '10' },
+      { lat: 50.0650, lng: 19.9413, severity: 'severe', type: 'tram', description: 'Tram 4 - 12min delay', line: '4' },
+      { lat: 50.0657, lng: 19.9191, severity: 'minor', type: 'bus', description: 'Bus 173 - 2min delay', line: '173' },
     ];
 
     // Add delay markers with light mode colors only

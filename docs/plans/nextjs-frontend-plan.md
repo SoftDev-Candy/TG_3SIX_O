@@ -62,12 +62,12 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
 - [x] Contribution history
 
 ### 2. Delay Reporting
-- [ ] Quick report form (location, line, severity, description)
-- [ ] Photo/video upload
-- [ ] Auto-detect user location
+- [x] Quick report form (location, line, severity, description)
+- [x] Photo upload; max 3 images, 5MB each
+- [x] Auto-detect user location (mocked for now)
 - [ ] Suggest nearby transit stops
-- [ ] Category tags (mechanical, signal, weather, etc.)
-- [ ] Estimated delay duration input
+- [x] Category tags (mechanical, signal, weather, etc.)
+- [x] Estimated delay duration input
 
 ### 3. Points & Gamification
 - [ ] Points awarded for:
@@ -75,7 +75,7 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
   - First reporter bonus
   - Report accuracy (verified by other users)
   - Helpful upvotes
-  - basic algorithm: 1st user gets 1 point and 1 additional point for each upvote, 2nd user gets 1 point 
+  - basic algorithm: 1st user gets 1 point and 1 additional point for each upvote, 2nd user gets 1 point and 1 additional point for each upvote, 3rd user gets 1 point and 1 additional point for each upvote, etc. (so 1st user will get the most points and perhaps bonus points as 1st reporter)
 - [ ] Point redemption system (future)
   - Points can be used to purchase discounts or other rewards with partners (coupon codes)
 
