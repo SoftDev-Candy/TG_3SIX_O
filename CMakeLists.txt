@@ -67,7 +67,6 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 
-
 message(STATUS "Project: ${PROJECT_NAME}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Output dir: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")

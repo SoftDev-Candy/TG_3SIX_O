@@ -1,4 +1,4 @@
-    #include "server.hpp"
+﻿    #include "server.hpp"
     #include <iostream>
     #include <thread>
     #include <chrono>
@@ -82,18 +82,37 @@ static long long parse_ics_dtstart(const std::string& line) {
 Store STORE;
 
 // Build demo graph
+// Build demo graph (8-node layout)
 Graph build_demo_graph() {
-    Graph g(6);
-    g.add_edge(0, 1, 5); g.add_edge(1, 0, 5);
-    g.add_edge(1, 2, 5); g.add_edge(2, 1, 5);
-    g.add_edge(0, 3, 10); g.add_edge(3, 0, 10);
-    g.add_edge(3, 4, 3); g.add_edge(4, 3, 3);
-    g.add_edge(4, 2, 2); g.add_edge(2, 4, 2);
-    g.add_edge(2, 5, 7); g.add_edge(5, 2, 7);
-    g.add_edge(4, 5, 6); g.add_edge(5, 4, 6);
-    g.n = 6;
+    // create 8 nodes (0..7)
+    Graph g(8);
+
+    // helper to add bidirectional edges
+    auto add_bi = [&](int a, int b, long long w) {
+        g.add_edge(a, b, w);
+        g.add_edge(b, a, w);
+        };
+
+    // perimeter edges (forming an octagon-like square)
+    add_bi(0, 1, 4);  // top-left -> top-middle
+    add_bi(1, 2, 4);  // top-middle -> top-right
+    add_bi(2, 3, 4);  // top-right -> mid-right
+    add_bi(3, 4, 4);  // mid-right -> bottom-right
+    add_bi(4, 5, 4);  // bottom-right -> bottom-middle
+    add_bi(5, 6, 4);  // bottom-middle -> bottom-left
+    add_bi(6, 7, 4);  // bottom-left -> mid-left
+    add_bi(7, 0, 4);  // mid-left -> top-left
+
+    // interior connectors (shortcuts but not diagonals)
+    add_bi(1, 5, 6);  // top-middle ↔ bottom-middle
+    add_bi(7, 3, 6);  // mid-left ↔ mid-right
+
+    // note: intentionally no 0<->4 or 2<->6 diagonals
+
+    g.n = 8;
     return g;
 }
+
 
 // made it global might need it late for other purposes
 nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
@@ -812,7 +831,7 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                         // Wait until notified or timeout (keeps connection alive)
                         g_events_cv.wait_for(lk, std::chrono::seconds(2));
 
-                        // Release the g_events_mutex quickly � do not hold while calling STORE/DNA/compute
+                        // Release the g_events_mutex quickly — do not hold while calling STORE/DNA/compute
                         lk.unlock();
 
                         try {

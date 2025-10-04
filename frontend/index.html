@@ -68,8 +68,8 @@
 <body>
     <div id="controls">
         <div>
-            <label>Src: <input id="src" type="number" value="0" min="0" max="5" /></label>
-            <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="5" /></label>
+            <label>Src: <input id="src" type="number" value="0" min="0" max="7" /></label>
+            <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="7" /></label>
             <button id="routeBtn" class="btn">Compute Route</button>
             <button id="monitorBtn" class="btn">Monitor this route (threshold: <input id="monitorThreshold" type="number" value="3" min="1" style="width:60px"> min)</button>
 
@@ -196,6 +196,8 @@
             [50.0673, 20.0046],
             [50.0644, 19.9894],
             [50.0676, 19.9888],
+            [50.0676, 19.9903],
+            [50.0676, 19.9888],
             [50.0676, 19.9903]
         ];
 
@@ -205,7 +207,11 @@
             const m = L.circleMarker(nodes[i], { radius: 7, color: '#222', fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindPopup("Node " + i);
             nodeMarkers.push(m);
         }
-        const edges = [[0, 1], [1, 2], [0, 3], [3, 4], [4, 2], [2, 5], [4, 5]];
+        const edges = [
+            [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0],
+            // interior connectors to create alternatives (avoid hypotenuse)
+            [1, 5], [7, 3]
+        ];
         edges.forEach(e => {
             const a = nodes[e[0]], b = nodes[e[1]];
             L.polyline([a, b], { color: '#888', weight: 2, opacity: 0.6 }).addTo(map);
