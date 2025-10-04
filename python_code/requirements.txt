@@ -1,0 +1,6 @@
+streamlit==1.25.0
+requests==2.31.0
+folium==0.18.3
+streamlit-folium==0.11.0
+gtfs-realtime-bindings==0.0.7
+protobuf==4.23.4
