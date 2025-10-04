@@ -1,4 +1,3 @@
-import time
 import requests
 import streamlit as st
 from google.transit import gtfs_realtime_pb2
@@ -15,7 +14,6 @@ REFRESH_INTERVAL = 60  # seconds
 
 @st.cache_resource(ttl=REFRESH_INTERVAL)
 def fetch_feed(url: str) -> gtfs_realtime_pb2.FeedMessage:
-    """Fetch and parse a GTFS Realtime protobuf feed."""
     feed = gtfs_realtime_pb2.FeedMessage()
     try:
         r = requests.get(url, timeout=10, verify=False)
@@ -76,10 +74,9 @@ def format_delay(delay: int | None) -> str:
 
 def main():
     st.sidebar.header("Options")
-
     # Manual refresh button
     if st.sidebar.button("Refresh Map Now"):
-        st.experimental_rerun()
+        st.experimental_rerun()  # remove this entirely for old Streamlit
 
     st.sidebar.caption(f"Map auto-refreshes every {REFRESH_INTERVAL} seconds.")
 
@@ -111,7 +108,7 @@ def main():
             popup=f"Bus/Tram {v['id']}<br>Route {v['route']}<br>Delay: {format_delay(v['delay'])}"
         ).add_to(m)
 
-    # Legend
+    # Add legend
     legend_html = """
     <div style="position: fixed; 
                 bottom: 50px; left: 50px; width: 150px; height: 110px; 
@@ -128,10 +125,6 @@ def main():
 
     st_folium(m, width=1000, height=700)
     st.caption("Data: Zarząd Transportu Publicznego w Krakowie (GTFS Realtime)")
-
-    # Automatic refresh after map renders
-    time.sleep(REFRESH_INTERVAL)
-    st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
