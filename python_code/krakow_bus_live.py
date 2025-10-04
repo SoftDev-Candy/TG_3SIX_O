@@ -76,20 +76,25 @@ def format_delay(delay: int | None) -> str:
 def main():
     """Render the Kraków public transport live map."""
 
-    # Auto-refresh every 60 seconds (works on all versions)
-    st_autorefresh = st.sidebar.button("Refresh Map")
-    st.sidebar.caption("Click to manually refresh. Map data cached for 60 seconds.")
+    # Manual refresh button
+    st.sidebar.header("Options")
+    st.sidebar.button("Refresh Map")
+    st.sidebar.caption("Click to refresh. Data cached for 60 seconds.")
 
     vehicles = load_vehicle_data()
 
-    # Sidebar: filter by routes
-    st.sidebar.header("Filter Options")
+    # Sidebar: select single route or All
+    st.sidebar.header("Select a Route")
     all_routes = sorted(set(v["route"] for v in vehicles))
-    show_routes = st.sidebar.multiselect(
-        "Select routes to display (leave empty for all)", options=all_routes, default=all_routes
+    route_option = st.sidebar.selectbox(
+        "Route to display",
+        options=["All"] + all_routes,
+        index=0  # default to "All"
     )
 
-    vehicles = [v for v in vehicles if v["route"] in show_routes]
+    # Filter vehicles
+    if route_option != "All":
+        vehicles = [v for v in vehicles if v["route"] == route_option]
 
     # Center map on Kraków
     m = folium.Map(location=[50.0647, 19.945], zoom_start=12)
@@ -106,7 +111,7 @@ def main():
             popup=f"Bus/Tram {v['id']}<br>Route {v['route']}<br>Delay: {format_delay(v['delay'])}"
         ).add_to(m)
 
-    # Legend
+    # Add legend
     legend_html = """
     <div style="position: fixed; 
                 bottom: 50px; left: 50px; width: 150px; height: 110px; 
