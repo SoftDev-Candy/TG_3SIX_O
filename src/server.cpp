@@ -82,37 +82,37 @@ static long long parse_ics_dtstart(const std::string& line) {
 Store STORE;
 
 // Build demo graph
-// Build demo graph (8-node layout)
+// Build demo graph (-node layout)
 Graph build_demo_graph() {
-    // create 8 nodes (0..7)
-    Graph g(8);
+    // create 10 nodes (0..9)
+    Graph g(10);
 
-    // helper to add bidirectional edges
+    // helper for bidirectional edges
     auto add_bi = [&](int a, int b, long long w) {
         g.add_edge(a, b, w);
         g.add_edge(b, a, w);
         };
 
-    // perimeter edges (forming an octagon-like square)
-    add_bi(0, 1, 4);  // top-left -> top-middle
-    add_bi(1, 2, 4);  // top-middle -> top-right
-    add_bi(2, 3, 4);  // top-right -> mid-right
-    add_bi(3, 4, 4);  // mid-right -> bottom-right
-    add_bi(4, 5, 4);  // bottom-right -> bottom-middle
-    add_bi(5, 6, 4);  // bottom-middle -> bottom-left
-    add_bi(6, 7, 4);  // bottom-left -> mid-left
-    add_bi(7, 0, 4);  // mid-left -> top-left
+    // --- Perimeter edges (matching your 9-node frontend layout) ---
+    // upper/right route: 0 → 1 → 2 → 3 → 4
+    add_bi(0, 1, 4);
+    add_bi(1, 2, 4);
+    add_bi(2, 3, 4);
+    add_bi(3, 4, 4);
+    add_bi(4, 5, 4);
 
-    // interior connectors (shortcuts but not diagonals)
-    add_bi(1, 5, 6);  // top-middle ↔ bottom-middle
-    add_bi(7, 3, 6);  // mid-left ↔ mid-right
+    add_bi(0, 6, 4);
+    add_bi(6, 7, 4);
+    add_bi(7, 8, 4);
+    add_bi(8, 9, 4);
+    add_bi(9, 4, 4);
+    // (Optional connectors — comment out if you want pure perimeter only)
+    // add_bi(2, 6, 6);   // mid diagonal connector
+    // add_bi(1, 7, 6);   // alternate cross connector
 
-    // note: intentionally no 0<->4 or 2<->6 diagonals
-
-    g.n = 8;
+    g.n = 10;
     return g;
 }
-
 
 // made it global might need it late for other purposes
 nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
