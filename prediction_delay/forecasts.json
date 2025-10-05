@@ -1,0 +1,162 @@
+[
+    {
+        "current_time": "2025-10-04 13:50:00",
+        "predicted_time": "2025-10-04 15:50:00",
+        "predicted_delay": "4.99 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 18
+    },
+    {
+        "current_time": "2025-10-04 13:50:00",
+        "predicted_time": "2025-10-04 17:50:00",
+        "predicted_delay": "15.03 minutes",
+        "probability": "95%",
+        "status": "Delayed",
+        "route": 18
+    },
+    {
+        "current_time": "2025-10-04 13:50:00",
+        "predicted_time": "2025-10-04 19:50:00",
+        "predicted_delay": "12.54 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 18
+    },
+    {
+        "current_time": "2025-10-04 13:50:00",
+        "predicted_time": "2025-10-04 21:50:00",
+        "predicted_delay": "15.03 minutes",
+        "probability": "98%",
+        "status": "Delayed",
+        "route": 18
+    },
+    {
+        "current_time": "2025-10-04 13:30:00",
+        "predicted_time": "2025-10-04 15:30:00",
+        "predicted_delay": "5.0 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 52
+    },
+    {
+        "current_time": "2025-10-04 13:30:00",
+        "predicted_time": "2025-10-04 17:30:00",
+        "predicted_delay": "10.01 minutes",
+        "probability": "95%",
+        "status": "Delayed",
+        "route": 52
+    },
+    {
+        "current_time": "2025-10-04 13:30:00",
+        "predicted_time": "2025-10-04 19:30:00",
+        "predicted_delay": "5.0 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 52
+    },
+    {
+        "current_time": "2025-10-04 13:30:00",
+        "predicted_time": "2025-10-04 21:30:00",
+        "predicted_delay": "5.0 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 52
+    },
+    {
+        "current_time": "2025-10-04 14:00:00",
+        "predicted_time": "2025-10-04 16:00:00",
+        "predicted_delay": "5.02 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 139
+    },
+    {
+        "current_time": "2025-10-04 14:00:00",
+        "predicted_time": "2025-10-04 18:00:00",
+        "predicted_delay": "5.02 minutes",
+        "probability": "98%",
+        "status": "Delayed",
+        "route": 139
+    },
+    {
+        "current_time": "2025-10-04 14:00:00",
+        "predicted_time": "2025-10-04 20:00:00",
+        "predicted_delay": "9.97 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 139
+    },
+    {
+        "current_time": "2025-10-04 14:00:00",
+        "predicted_time": "2025-10-04 22:00:00",
+        "predicted_delay": "5.02 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 139
+    },
+    {
+        "current_time": "2025-10-04 14:10:00",
+        "predicted_time": "2025-10-04 16:10:00",
+        "predicted_delay": "9.98 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 152
+    },
+    {
+        "current_time": "2025-10-04 14:10:00",
+        "predicted_time": "2025-10-04 18:10:00",
+        "predicted_delay": "9.98 minutes",
+        "probability": "95%",
+        "status": "Delayed",
+        "route": 152
+    },
+    {
+        "current_time": "2025-10-04 14:10:00",
+        "predicted_time": "2025-10-04 20:10:00",
+        "predicted_delay": "9.98 minutes",
+        "probability": "95%",
+        "status": "Delayed",
+        "route": 152
+    },
+    {
+        "current_time": "2025-10-04 14:10:00",
+        "predicted_time": "2025-10-04 22:10:00",
+        "predicted_delay": "9.98 minutes",
+        "probability": "97%",
+        "status": "Delayed",
+        "route": 152
+    },
+    {
+        "current_time": "2025-10-04 14:15:00",
+        "predicted_time": "2025-10-04 16:15:00",
+        "predicted_delay": "10.02 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 304
+    },
+    {
+        "current_time": "2025-10-04 14:15:00",
+        "predicted_time": "2025-10-04 18:15:00",
+        "predicted_delay": "10.02 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 304
+    },
+    {
+        "current_time": "2025-10-04 14:15:00",
+        "predicted_time": "2025-10-04 20:15:00",
+        "predicted_delay": "10.02 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 304
+    },
+    {
+        "current_time": "2025-10-04 14:15:00",
+        "predicted_time": "2025-10-04 22:15:00",
+        "predicted_delay": "5.01 minutes",
+        "probability": "96%",
+        "status": "Delayed",
+        "route": 304
+    }
+]
