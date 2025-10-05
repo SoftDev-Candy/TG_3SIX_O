@@ -14,7 +14,16 @@ Generates realistic street-following paths for transit routes in `krakow.json`.
 
 ```bash
 # From project root
+
+# Process tram routes (default)
 npx tsx scripts/generate-realistic-paths.ts
+
+# Process specific file
+npx tsx scripts/generate-realistic-paths.ts ../data/cities/krakow/krakow-bus.json
+
+# Process all Kraków files
+npx tsx scripts/generate-realistic-paths.ts ../data/cities/krakow/krakow-tram.json
+npx tsx scripts/generate-realistic-paths.ts ../data/cities/krakow/krakow-bus.json
 ```
 
 ### Prerequisites

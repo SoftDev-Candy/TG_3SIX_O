@@ -38,8 +38,12 @@ interface KrakowData {
   routes: Route[];
 }
 
-// Load krakow.json
-const krakowDataPath = path.join(__dirname, '../data/krakow.json');
+// Get file path from command line argument or use default
+const filePath = process.argv[2] || '../data/cities/krakow/krakow-tram.json';
+const krakowDataPath = path.join(__dirname, filePath);
+
+console.log(`\n📁 Processing file: ${filePath}\n`);
+
 const krakowData: KrakowData = JSON.parse(fs.readFileSync(krakowDataPath, 'utf-8'));
 
 /**
