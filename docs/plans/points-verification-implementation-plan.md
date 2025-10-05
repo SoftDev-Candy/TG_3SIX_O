@@ -545,12 +545,20 @@ Already defined in `points.ts`:
 2. ✅ Phase 2: Basic verification workflow (3h)
 3. ✅ Mock rewards page with static data (1h)
 
-**Demo Flow:**
-1. User logs in → sees points in navbar
-2. User views report on map → can upvote/downvote
-3. User submits report → gets points
-4. User views leaderboard → sees their rank
-5. User browses rewards → (mock redemption)
+**Interactive Demo Flow (HACKATHON SPECIAL):**
+1. **User submits report** → Appears immediately in Live Delays panel at top
+2. **Simulated engagement** → Report gets upvotes over time (auto-simulation)
+3. **User can upvote** → Other delays in Live Delays panel are voteable
+4. **Auto-verification** → After reaching 3 upvotes, report marked verified
+5. **Points notification** → Toast with confetti shows points earned
+6. **Auto-resolution** → After some time, verified reports resolve and award final bonus
+
+**Key Features for Demo:**
+- Real-time UI updates (report appears instantly)
+- Simulated upvotes (make it feel alive)
+- Toast notifications with confetti (satisfying feedback)
+- Live delays panel shows all reports
+- Smooth animations and transitions
 
 ### Nice-to-Have (4-6 hours)
 **If time permits:**
@@ -622,15 +630,45 @@ Already defined in `points.ts`:
 
 ---
 
-## 🔄 Next Steps
+## 🔄 Next Steps - Hackathon Interactive Demo
 
-1. **Review this plan** with team/mentor
-2. **Prioritize phases** based on time remaining
-3. **Set up database** (migrations for votes, points)
-4. **Implement Phase 1** (voting system - CRITICAL)
-5. **Test integration** with existing frontend components
-6. **Demo walkthrough** to identify gaps
-7. **Polish for judges** (loading states, animations, error handling)
+### 1. Live Delays Panel Enhancement (HIGH PRIORITY)
+- [ ] Show all reports in real-time (newest first)
+- [ ] Add upvote/downvote buttons to each delay card
+- [ ] Real-time updates when new reports submitted
+- [ ] Filter by status (pending/verified/resolved)
+- [ ] Smooth animations when reports update
+
+### 2. Simulated Engagement System (CRITICAL FOR DEMO)
+- [ ] Auto-generate upvotes on user's report after submission
+  - First upvote after 5 seconds
+  - Second upvote after 10 seconds
+  - Third upvote after 15 seconds (triggers verification)
+- [ ] Visual feedback: upvote count animates up
+- [ ] Other reports also get simulated activity (feels alive)
+
+### 3. Points Notification System (WOW FACTOR)
+- [ ] Install react-confetti or similar
+- [ ] Toast notification when points earned:
+  - Report submitted: "+3 points! 🎉"
+  - Report upvoted: "+1 point! 👍"
+  - Report verified: "+2 bonus points! ✅"
+  - Report resolved: "Mission complete! 🏆"
+- [ ] Confetti animation on bonus points
+- [ ] Sound effects (optional, subtle)
+
+### 4. Auto-Resolution Flow
+- [ ] Verified reports auto-resolve after 30 seconds (demo speed)
+- [ ] Toast notification: "Your report helped X commuters! +2 bonus points"
+- [ ] Update user points in navbar instantly
+- [ ] Show in points history
+
+### 5. Polish & Testing
+- [ ] Test full flow: Submit → Upvotes → Verify → Resolve → Points
+- [ ] Smooth transitions between states
+- [ ] Mobile-responsive toast notifications
+- [ ] Error handling (graceful degradation)
+- [ ] Loading states feel natural
 
 ---
 

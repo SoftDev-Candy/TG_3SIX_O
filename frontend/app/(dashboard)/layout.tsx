@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { OptionalAuth } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { Toaster } from 'sonner';
 import { 
   MapPin, 
   FileText, 
@@ -160,6 +161,9 @@ export default function DashboardLayout({
 
         {/* Main Content */}
         <main className={isFullViewport ? "h-full" : ""}>{children}</main>
+        
+        {/* Toast Notifications */}
+        <Toaster position="top-center" richColors closeButton />
       </div>
     </OptionalAuth>
   );

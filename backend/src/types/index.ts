@@ -20,6 +20,7 @@ export interface DelayReport {
   userId: string;
   transportType: 'bus' | 'tram' | 'train' | 'metro';
   line: string;
+  vehicleNumber?: string;
   location: {
     lat: number;
     lng: number;
@@ -28,7 +29,6 @@ export interface DelayReport {
   };
   severity: 'minor' | 'moderate' | 'severe';
   issueCategory: 'mechanical' | 'signal' | 'weather' | 'accident' | 'crowding' | 'other';
-  estimatedDelay: number;
   description: string;
   photos: string[];
   status: 'pending' | 'verified' | 'rejected' | 'resolved';
@@ -114,6 +114,7 @@ export interface PaginatedResponse<T> {
 export interface CreateReportInput {
   transportType: 'bus' | 'tram' | 'train' | 'metro';
   line: string;
+  vehicleNumber?: string;
   location: {
     lat: number;
     lng: number;
@@ -122,7 +123,6 @@ export interface CreateReportInput {
   };
   severity: 'minor' | 'moderate' | 'severe';
   issueCategory: 'mechanical' | 'signal' | 'weather' | 'accident' | 'crowding' | 'other';
-  estimatedDelay: number;
   description: string;
 }
 

@@ -64,32 +64,32 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
 ### 2. Delay Reporting
 - [x] Quick report form (location, line, severity, description)
 - [x] Photo upload; max 3 images, 5MB each
-- [x] Auto-detect user location (mocked for now)
 - [ ] Suggest nearby transit stops
 - [x] Category tags (mechanical, signal, weather, etc.)
-- [x] Estimated delay duration input
+- [x] Severity indicates delay range (minor 5-15min, moderate 15-30min, severe 30+min)
 
 ### 3. Points & Gamification
-- [ ] Points awarded for:
+- [x] Points awarded for:
   - Submitting verified reports
-  - First reporter bonus
+  - First reporter bonus (1 base + 2 bonus = 3 points)
   - Report accuracy (verified by other users)
-  - Helpful upvotes
-  - basic algorithm: 1st user gets 1 point and an additional point for each upvote, 2nd user gets 1 point and 1 additional point for each upvote, etc.
-- [ ] Point redemption system (future)
+  - helpful upvotes (1st reporter gets +1 per upvote)
+  - Algorithm: 1st reporter gets most points + bonus
+- [ ] Point redemption system (partially done only)
   - Points can be used to purchase discounts or other rewards with partners (coupon codes)
+  - 3 rewards seeded: MPK Kraków discount, coffee, PKP discount, zabka
 
 ### 4. Report Verification System
-- [ ] User upvote/downvote mechanism
-- [ ] Verification by multiple users
-- [ ] Automated verification via dispatcher API data
-- [ ] Report status: Pending → Verified → Resolved
-- [ ] Flag inappropriate/spam reports
+- [x] User upvote/downvote mechanism
+- [x] Verification by multiple users (auto-verify at 3 upvotes)
+- [x] Automated verification via dispatcher API data (mocked 70% success rate)
+- [x] Report status: Pending → Verified → Resolved
+- [x] Flag inappropriate/spam reports (auto-reject at 3 flags)
 
 ### 5. Real-time Delay Dashboard
-- [ ] Live map showing active disruptions
-- [ ] Color-coded severity indicators
-- [ ] Filter by transport type (bus, train, metro)
+- [x] Live map showing active disruptions
+- [x] Color-coded severity indicators
+- [x] Filter by transport type (bus, train, metro)
 - [ ] Filter by severity (minor, moderate, severe)
 - [ ] Timeline view of reported delays
 - [ ] Route impact analysis

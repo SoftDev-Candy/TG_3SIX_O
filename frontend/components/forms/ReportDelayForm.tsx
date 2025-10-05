@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, MapPin, Clock, AlertTriangle, Upload, X, Search, Loader2 } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, Upload, X, Search, Loader2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,13 +22,25 @@ const reportSchema = z.object({
     stopName: z.string().optional(),
     address: z.string().optional(),
   }),
-  transportType: z.enum(['bus', 'tram', 'train', 'metro', 'ferry']),
+  transportType: z.enum(['bus', 'tram', 'train', 'metro']),
   line: z.string().min(1, 'Line number/name is required'),
+  vehicleNumber: z.string().optional(), // Validated conditionally in refinement
   severity: z.enum(['minor', 'moderate', 'severe']),
   category: z.enum(['mechanical', 'signal', 'weather', 'accident', 'crowding', 'staff_shortage', 'other']),
   description: z.string().min(10, 'Please provide more details (minimum 10 characters)'),
-  estimatedDelay: z.number().min(1, 'Estimated delay must be at least 1 minute').max(300, 'Maximum delay is 300 minutes'),
-});
+}).refine(
+  (data) => {
+    // Vehicle number is mandatory for bus and tram
+    if (data.transportType === 'bus' || data.transportType === 'tram') {
+      return data.vehicleNumber && data.vehicleNumber.trim().length > 0;
+    }
+    return true;
+  },
+  {
+    message: 'Vehicle number is required for buses and trams',
+    path: ['vehicleNumber'],
+  }
+);
 
 type ReportFormData = z.infer<typeof reportSchema>;
 
@@ -38,12 +50,11 @@ interface ReportDelayFormProps {
   initialLocation?: Location;
 }
 
-const transportTypeOptions: { value: TransportType; label: string; icon: string }[] = [
+const transportTypeOptions: { value: TransportType; label: string; icon: string; disabled?: boolean; disabledReason?: string }[] = [
   { value: 'bus', label: 'Bus', icon: '🚌' },
   { value: 'tram', label: 'Tram', icon: '🚋' },
   { value: 'train', label: 'Train', icon: '🚆' },
-  { value: 'metro', label: 'Metro', icon: '🚇' },
-  { value: 'ferry', label: 'Ferry', icon: '⛴️' },
+  { value: 'metro', label: 'Metro', icon: '🚇', disabled: true, disabledReason: 'Coming soon' },
 ];
 
 const severityOptions: { value: Severity; label: string; color: string }[] = [
@@ -86,11 +97,11 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
     mode: 'onChange',
     defaultValues: {
       location: initialLocation || undefined,
-      estimatedDelay: 15,
     },
   });
 
   const watchedSeverity = watch('severity');
+  const watchedTransportType = watch('transportType');
 
   // Get current location
   const getCurrentLocation = async () => {
@@ -234,13 +245,106 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
     };
   }, [initialLocation]);
 
+  // Quick fill for demo/testing
+  const handleQuickFill = () => {
+    const demoScenarios = [
+      {
+        location: {
+          lat: 50.0614,
+          lng: 19.9372,
+          address: 'Main Square, Kraków',
+          stopName: 'Rynek Główny',
+        },
+        transportType: 'tram' as TransportType,
+        line: '8',
+        vehicleNumber: 'NG2341',
+        severity: 'moderate' as Severity,
+        category: 'mechanical' as DelayCategory,
+        description: 'Tram stuck at Main Square due to door malfunction. Passengers being transferred to next tram.',
+      },
+      {
+        location: {
+          lat: 50.067472,
+          lng: 19.991694,
+          address: 'Tauron Arena, Kraków',
+          stopName: 'Tauron Arena',
+        },
+        transportType: 'tram' as TransportType,
+        line: '52',
+        vehicleNumber: 'EU1889',
+        severity: 'severe' as Severity,
+        category: 'signal' as DelayCategory,
+        description: 'Signal failure at Tauron Arena intersection. Multiple trams backing up in both directions.',
+      },
+      {
+        location: {
+          lat: 50.0778,
+          lng: 19.8956,
+          address: 'AGH University, Kraków',
+          stopName: 'AGH Dworzec',
+        },
+        transportType: 'bus' as TransportType,
+        line: '194',
+        vehicleNumber: 'EY3983',
+        severity: 'minor' as Severity,
+        category: 'crowding' as DelayCategory,
+        description: 'Bus extremely crowded during rush hour. Standing room only, some passengers waiting for next bus.',
+      },
+      {
+        location: {
+          lat: 50.0677,
+          lng: 19.9445,
+          address: 'Kraków Główny Station',
+          stopName: 'Dworzec Główny',
+        },
+        transportType: 'train' as TransportType,
+        line: 'S1',
+        vehicleNumber: '',
+        severity: 'moderate' as Severity,
+        category: 'weather' as DelayCategory,
+        description: 'Train delayed due to heavy rain affecting track conditions. Expected 15-20 minute delay.',
+      },
+    ];
+
+    // Pick random scenario
+    const scenario = demoScenarios[Math.floor(Math.random() * demoScenarios.length)];
+
+    // Fill form
+    setValue('location', scenario.location);
+    setValue('transportType', scenario.transportType);
+    setValue('line', scenario.line);
+    if (scenario.vehicleNumber) {
+      setValue('vehicleNumber', scenario.vehicleNumber);
+    }
+    setValue('severity', scenario.severity);
+    setValue('category', scenario.category);
+    setValue('description', scenario.description);
+    
+    setCurrentLocation(scenario.location);
+    setSearchQuery(scenario.location.stopName || scenario.location.address || '');
+    
+    console.log('📝 Quick-filled with demo data:', scenario);
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <AlertTriangle className="h-5 w-5 text-orange-500" />
-          Report Delay
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            Report Delay
+          </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleQuickFill}
+            className="gap-2 text-xs"
+          >
+            <Zap className="h-3 w-3" />
+            Quick Fill
+          </Button>
+        </div>
       </CardHeader>
       
       <CardContent>
@@ -366,21 +470,30 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
             <Label className="text-sm font-medium">Transport Type</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {transportTypeOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-12 flex flex-col items-center justify-center gap-1"
-                  onClick={() => setValue('transportType', option.value)}
-                >
-                  <span className="text-lg">{option.icon}</span>
-                  <span className="text-xs">{option.label}</span>
-                </Button>
+                <div key={option.value} className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={`h-12 w-full flex flex-col items-center justify-center gap-1 ${
+                      option.disabled ? 'opacity-40 cursor-not-allowed' : ''
+                    }`}
+                    onClick={() => !option.disabled && setValue('transportType', option.value)}
+                    disabled={option.disabled}
+                  >
+                    <span className="text-lg">{option.icon}</span>
+                    <span className="text-xs">{option.label}</span>
+                  </Button>
+                  {option.disabled && option.disabledReason && (
+                    <div className="absolute -bottom-5 left-0 right-0 text-center">
+                      <span className="text-[10px] text-gray-500">{option.disabledReason}</span>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
             {errors.transportType && (
-              <p className="text-sm text-red-600">{errors.transportType.message}</p>
+              <p className="text-sm text-red-600 mt-6">{errors.transportType.message}</p>
             )}
           </div>
 
@@ -389,7 +502,7 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
             <Label htmlFor="line" className="text-sm font-medium">Line Number/Name</Label>
             <Input
               id="line"
-              placeholder="e.g., Line 42, Red Line, Route A"
+              placeholder="e.g., 8, 194, S1"
               {...register('line')}
               className="h-12"
             />
@@ -397,6 +510,28 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
               <p className="text-sm text-red-600">{errors.line.message}</p>
             )}
           </div>
+
+          {/* Vehicle Number (Bus/Tram only) */}
+          {(watchedTransportType === 'bus' || watchedTransportType === 'tram') && (
+            <div className="space-y-2">
+              <Label htmlFor="vehicleNumber" className="text-sm font-medium">
+                Vehicle Number <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="vehicleNumber"
+                placeholder="e.g., EY3983, NG2341"
+                {...register('vehicleNumber')}
+                className="h-12"
+                required
+              />
+              <p className="text-xs text-gray-500">
+                The specific {watchedTransportType} number shown on the vehicle (mandatory for accurate reporting)
+              </p>
+              {errors.vehicleNumber && (
+                <p className="text-sm text-red-600">{errors.vehicleNumber.message}</p>
+              )}
+            </div>
+          )}
 
           {/* Severity */}
           <div className="space-y-3">
@@ -440,25 +575,6 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
             </select>
             {errors.category && (
               <p className="text-sm text-red-600">{errors.category.message}</p>
-            )}
-          </div>
-
-          {/* Estimated Delay */}
-          <div className="space-y-2">
-            <Label htmlFor="estimatedDelay" className="text-sm font-medium flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              Estimated Delay (minutes)
-            </Label>
-            <Input
-              id="estimatedDelay"
-              type="number"
-              min="1"
-              max="300"
-              {...register('estimatedDelay', { valueAsNumber: true })}
-              className="h-12"
-            />
-            {errors.estimatedDelay && (
-              <p className="text-sm text-red-600">{errors.estimatedDelay.message}</p>
             )}
           </div>
 

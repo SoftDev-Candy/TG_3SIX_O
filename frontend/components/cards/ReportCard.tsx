@@ -26,7 +26,6 @@ const transportIcons = {
   tram: '🚋',
   train: '🚆',
   metro: '🚇',
-  ferry: '⛴️',
 };
 
 const severityConfig = {
@@ -70,23 +69,24 @@ export default function ReportCard({
               <div className="text-2xl mb-1">
                 {transportIcons[report.transportType]}
               </div>
-              <Badge variant="outline" className="text-xs px-1 py-0">
-                {report.line}
-              </Badge>
+              <div className="flex flex-col gap-1">
+                <Badge variant="outline" className="text-xs px-1 py-0">
+                  {report.line}
+                </Badge>
+                {report.vehicleNumber && (
+                  <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                    #{report.vehicleNumber}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Main Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={cn('text-xs', severityConfig[report.severity].color)}>
-                    {severityConfig[report.severity].label}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Clock className="h-3 w-3" />
-                    {report.estimatedDelay}min
-                  </div>
-                </div>
+                <Badge className={cn('text-xs', severityConfig[report.severity].color)}>
+                  {severityConfig[report.severity].label}
+                </Badge>
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                   <StatusIcon className={cn('h-3 w-3', statusConfig[report.status].color)} />
                   {statusConfig[report.status].label}
@@ -153,18 +153,21 @@ export default function ReportCard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="font-medium">
-                      {report.line}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-medium">
+                        Line {report.line}
+                      </Badge>
+                      {report.vehicleNumber && (
+                        <Badge variant="secondary" className="text-xs">
+                          Vehicle #{report.vehicleNumber}
+                        </Badge>
+                      )}
+                    </div>
                     <Badge className={severityConfig[report.severity].color}>
                       {severityConfig[report.severity].label}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {report.estimatedDelay} min delay
-                    </div>
                     <div className="flex items-center gap-1">
                       <StatusIcon className={cn('h-4 w-4', statusConfig[report.status].color)} />
                       {statusConfig[report.status].label}

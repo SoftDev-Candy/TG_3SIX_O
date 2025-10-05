@@ -1,11 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import ReportDelayForm from '@/components/forms/ReportDelayForm';
+import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSimulatedEngagement } from '@/hooks/useSimulatedEngagement';
+import { usePointsNotifications } from '@/hooks/usePointsNotifications';
+import { apiClient } from '@/lib/api-client';
+import type { DelayReport, CreateReportInput } from '@/types';
 import { 
   AlertCircle, 
   Clock,
@@ -40,12 +46,132 @@ export default function MapPage() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [activeTab, setActiveTab] = useState('map');
+  const [reports, setReports] = useState<DelayReport[]>([]);
+  const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { user, isAuthenticated } = useAuth();
+  const { showPointsToast, showVerificationToast, showResolutionToast } = usePointsNotifications();
 
-  const handleReportSubmit = async (data: any) => {
-    // TODO: Implement report submission to API
-    console.log('Report submitted:', data);
-    setShowReportModal(false);
+  // Fetch reports on mount
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const response = await apiClient.getReports();
+        if (response.success && response.data) {
+          setReports(response.data.items || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch reports:', error);
+      }
+    };
+    
+    fetchReports();
+  }, []);
+
+  // Simulated engagement for user's submitted reports
+  useSimulatedEngagement({
+    reportId: lastSubmittedReportId || '',
+    enabled: !!lastSubmittedReportId,
+    onUpvote: async (reportId) => {
+      try {
+        // Simulate upvote from community
+        await apiClient.voteReport(reportId, 'upvote');
+        
+        // Update local state
+        setReports(prev => prev.map(r =>
+          r.id === reportId ? { ...r, upvotes: r.upvotes + 1 } : r
+        ));
+      } catch (error) {
+        console.error('Simulated upvote failed:', error);
+      }
+    },
+    onVerified: (reportId) => {
+      // Update status to verified
+      setReports(prev => prev.map(r =>
+        r.id === reportId ? { ...r, status: 'verified' } : r
+      ));
+      
+      // Schedule auto-resolution after 30 seconds
+      setTimeout(() => {
+        setReports(prev => prev.map(r =>
+          r.id === reportId ? { ...r, status: 'resolved' } : r
+        ));
+        
+        const commutersHelped = Math.floor(Math.random() * 70) + 30;
+        showResolutionToast(commutersHelped);
+      }, 30000);
+    },
+  });
+
+  const handleReportSubmit = async (data: CreateReportInput) => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to report delays');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await apiClient.createReport(data);
+      
+      if (response.success && response.data) {
+        // Add to top of list
+        setReports(prev => [response.data!, ...prev]);
+        
+        // Show success toast
+        toast.success('+3 points! Report submitted 🎉', {
+          description: 'Your community will help verify it!',
+          duration: 4000,
+        });
+        
+        // Start simulated engagement
+        setLastSubmittedReportId(response.data.id);
+        
+        // Close modal
+        setShowReportModal(false);
+        
+        // Open delays panel to show the new report
+        setShowStats(true);
+        setActiveTab('delays');
+      }
+    } catch (error) {
+      toast.error('Failed to submit report. Please try again.');
+      console.error('Report submission error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleVote = async (reportId: string, voteType: 'upvote' | 'downvote') => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to vote');
+      return;
+    }
+    
+    try {
+      const response = await apiClient.voteReport(reportId, voteType);
+      
+      if (response.success && response.data) {
+        // Update local state
+        setReports(prev => prev.map(r =>
+          r.id === reportId
+            ? { 
+                ...r, 
+                upvotes: response.data!.voteStats.upvotes,
+                downvotes: response.data!.voteStats.downvotes 
+              }
+            : r
+        ));
+        
+        toast.success('+0.5 points for helpful vote! 👍', {
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to vote');
+      console.error('Vote error:', error);
+    }
   };
 
   return (
@@ -250,73 +376,24 @@ export default function MapPage() {
             <div className="p-6">
               <ReportDelayForm 
                 onSubmit={handleReportSubmit}
-                isSubmitting={false}
+                isSubmitting={isSubmitting}
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Delays/Stats Panel - Slide up from bottom */}
+      {/* Live Delays Panel */}
       {showStats && (
-        <div className="absolute bottom-20 left-0 right-0 z-[1001] animate-in slide-in-from-bottom duration-300">
-          <div className="card bg-base-100/95 backdrop-blur-sm shadow-2xl mx-4 rounded-t-2xl">
-            <div className="card-body p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="card-title">Live Delays & Stats</h3>
-                <button 
-                  className="btn btn-ghost btn-sm btn-circle"
-                  onClick={() => {
-                    setShowStats(false);
-                    setActiveTab('map');
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="stat bg-error/10 rounded-lg border border-error/20 p-3">
-                  <div className="stat-value text-2xl text-error">12</div>
-                  <div className="stat-desc">Active Delays</div>
-                </div>
-                <div className="stat bg-info/10 rounded-lg border border-info/20 p-3">
-                  <div className="stat-value text-2xl text-info">47</div>
-                  <div className="stat-desc">Reports Today</div>
-                </div>
-                <div className="stat bg-success/10 rounded-lg border border-success/20 p-3">
-                  <div className="stat-value text-2xl text-success">234</div>
-                  <div className="stat-desc">Active Users</div>
-                </div>
-                <div className="stat bg-secondary/10 rounded-lg border border-secondary/20 p-3">
-                  <div className="stat-value text-2xl text-secondary">3.2m</div>
-                  <div className="stat-desc">Avg Response</div>
-                </div>
-              </div>
-              
-              {/* Severity Legend */}
-              <div className="divider my-2"></div>
-              <div>
-                <h4 className="text-sm font-medium mb-3">Severity Levels</h4>
-                <div className="flex justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-success rounded-full"></div>
-                    <span>Minor (1-5m)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-warning rounded-full"></div>
-                    <span>Moderate (5-15m)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-error rounded-full"></div>
-                    <span>Severe (15m+)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <LiveDelaysPanel
+          reports={reports}
+          onVote={handleVote}
+          onClose={() => {
+            setShowStats(false);
+            setActiveTab('map');
+          }}
+          currentUserId={user?.id}
+        />
       )}
 
       {/* Filters Panel */}

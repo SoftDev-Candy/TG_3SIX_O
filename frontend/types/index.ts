@@ -18,7 +18,7 @@ export interface Location {
 }
 
 // Delay Report types
-export type TransportType = 'bus' | 'tram' | 'train' | 'metro' | 'ferry';
+export type TransportType = 'bus' | 'tram' | 'train' | 'metro';
 export type Severity = 'minor' | 'moderate' | 'severe';
 export type ReportStatus = 'pending' | 'verified' | 'resolved' | 'rejected';
 export type DelayCategory = 
@@ -40,10 +40,10 @@ export interface DelayReport {
   location: Location;
   transportType: TransportType;
   line: string;
+  vehicleNumber?: string;
   severity: Severity;
   category: DelayCategory;
   description: string;
-  estimatedDelay: number; // minutes
   photos?: string[];
   status: ReportStatus;
   upvotes: number;
@@ -142,10 +142,10 @@ export interface CreateReportInput {
   location: Location;
   transportType: TransportType;
   line: string;
+  vehicleNumber?: string;
   severity: Severity;
   category: DelayCategory;
   description: string;
-  estimatedDelay: number;
   photos?: File[];
 }
 
