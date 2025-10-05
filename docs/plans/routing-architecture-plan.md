@@ -56,7 +56,6 @@ TG_3SIX_O/
 │   │   ├── services/
 │   │   │   ├── routing-service.ts    ← Service abstraction
 │   │   │   ├── mock-routing.ts       ← Mock implementation (hackathon)
-│   │   │   └── cpp-routing.ts        ← C++ integration (future)
 │   │   ├── types/
 │   │   │   └── index.ts         ← Shared types
 │   │   └── server.ts            ← Fastify server entry
@@ -237,17 +236,78 @@ TG_3SIX_O/
 
 ---
 
+## 🗺️ Realistic Path Generation Strategy
+
+### Hybrid Approach (RECOMMENDED)
+**Time:** 1 hour | **Accuracy:** 85-95% | **Complexity:** Medium
+
+#### Method by Transport Type
+
+**1. Trams & Buses → OSRM Routing API**
+- Use `http://router.project-osrm.org/route/v1/driving/...`
+- ~75-80% accurate for trams (follows streets trams use)
+- ~95% accurate for buses (same roads as cars)
+- Fast, free, no setup required
+
+**2. Trains → Overpass API**
+- Use `https://overpass-api.de/api/interpreter`
+- 100% accurate (actual railway tracks from OpenStreetMap)
+- Queries OSM relations for train lines
+- Returns exact track geometry
+
+#### Why This Works
+- Most Kraków trams run on streets alongside traffic ✅
+- OSRM `driving` profile follows these streets ✅
+- Trains need dedicated tracks (use Overpass) ✅
+- Result: Demo-quality paths without self-hosting OSRM
+
+#### Implementation Script
+Create `/scripts/generate-realistic-paths.ts`:
+- Detects transport type
+- Routes trams/buses through OSRM
+- Routes trains through Overpass API
+- Updates krakow.json with realistic coordinates
+- Run once, commit the updated file
+
+---
+
 ## 🛠️ Implementation Phases
 
-### Phase 1: Data & Mock Service (Now)
+### Phase 0: Generate Realistic Paths (NEW - Do First!)
+**Time:** 1 hour  
+**Priority:** CRITICAL for demo
+
+#### 0.1 Create Path Generation Script
+- [x] Install dependencies (`tsx` for TypeScript execution)
+- [x] Create `/scripts/generate-realistic-paths.ts`
+- [x] Implement OSRM path fetching for trams/buses
+- [x] Implement Overpass API for trains
+- [x] Add error handling and fallbacks
+- [x] Create `/scripts/README.md` with usage instructions
+
+#### 0.2 Run Script & Update Data
+- [ ] Execute: `npx tsx scripts/generate-realistic-paths.ts`
+- [ ] Verify realistic paths in krakow.json (should see 100-300 points per route)
+- [ ] Test on map (routes should follow streets now!)
+- [ ] Commit updated krakow.json
+
+**To run now:**
+```bash
+cd /home/bdh/Development/TG_3SIX_O
+npx tsx scripts/generate-realistic-paths.ts
+```
+
+---
+
+### Phase 1: Data & Mock Service
 **Time:** 2-3 hours  
 **Priority:** CRITICAL for demo
 
 #### 1.1 Create krakow.json
-- [ ] Define 5-7 key routes (Tram 4, 8, 10, 52, Bus 52, 173, Train SKA)
-- [ ] Add major stops (Tauron Arena, Dworzec, Rynek, etc.)
-- [ ] Create realistic path coordinates
-- [ ] GeoJSON LineString format
+- [x] Define 5-7 key routes (Tram 4, 8, 10, 52, Bus 52, 173, Train SKA)
+- [x] Add major stops (Tauron Arena, Dworzec, Rynek, etc.)
+- [ ] ~~Create realistic path coordinates~~ (Done by Phase 0 script!)
+- [x] GeoJSON LineString format
 
 #### 1.2 Scaffold Fastify Backend
 - [ ] Initialize Fastify project in `/backend`

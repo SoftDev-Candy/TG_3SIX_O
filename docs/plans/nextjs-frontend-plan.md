@@ -75,7 +75,7 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
   - First reporter bonus
   - Report accuracy (verified by other users)
   - Helpful upvotes
-  - basic algorithm: 1st user gets 1 point and 1 additional point for each upvote, 2nd user gets 1 point and 1 additional point for each upvote, 3rd user gets 1 point and 1 additional point for each upvote, etc. (so 1st user will get the most points and perhaps bonus points as 1st reporter)
+  - basic algorithm: 1st user gets 1 point and 1 additional point for each upvote, 2nd user gets 1 point and 1 additional point for each upvote, 3rhmmm. come to think of it.. for krakow (the location we're going od user gets 1 point and 1 additional point for each upvote, etc. (so 1st user will get the most points and perhaps bonus points as 1st reporter)
 - [ ] Point redemption system (future)
   - Points can be used to purchase discounts or other rewards with partners (coupon codes)
 

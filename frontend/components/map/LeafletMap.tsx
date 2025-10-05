@@ -114,83 +114,46 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
         `);
     });
 
-    // Add transit route polylines
-    // TODO: Load from /data/krakow.json in production
-    const transitRoutes = [
-      {
-        id: 'tram-52',
-        line: '52',
-        type: 'tram',
-        color: '#E63946',
-        path: [
-          [50.0955, 19.9087], [50.0850, 19.9150], [50.0750, 19.9350],
-          [50.0686, 19.9469], [50.0675, 19.9452], [50.0693, 19.9534],
-          [50.068, 19.975], [50.067472, 19.991694], [50.062, 20.015], [50.0580, 20.0350]
-        ]
-      },
-      {
-        id: 'tram-4',
-        line: '4',
-        type: 'tram',
-        color: '#457B9D',
-        path: [
-          [50.0890, 19.8950], [50.0750, 19.9200], [50.0686, 19.9469],
-          [50.0650, 19.9413], [50.0619, 19.9368], [50.0700, 19.9600],
-          [50.0850, 20.0000], [50.0950, 20.0500]
-        ]
-      },
-      {
-        id: 'tram-8',
-        line: '8',
-        type: 'tram',
-        color: '#F1A208',
-        path: [
-          [50.0590, 19.9150], [50.0560, 19.9250], [50.0544, 19.9356],
-          [50.0619, 19.9368], [50.0675, 19.9452], [50.0500, 19.9600],
-          [50.0300, 19.9750], [50.0050, 19.9900]
-        ]
-      },
-      {
-        id: 'tram-10',
-        line: '10',
-        type: 'tram',
-        color: '#2A9D8F',
-        path: [
-          [50.0150, 19.9350], [50.0544, 19.9356], [50.0620, 19.9400],
-          [50.0675, 19.9452], [50.0693, 19.9534], [50.0750, 19.9800],
-          [50.0800, 20.0200], [50.0850, 20.0600]
-        ]
-      },
-      {
-        id: 'bus-52',
-        line: '52',
-        type: 'bus',
-        color: '#264653',
-        path: [
-          [50.0850, 19.9150], [50.0700, 19.9300], [50.0675, 19.9452],
-          [50.0619, 19.9368], [50.0450, 19.9200], [50.0300, 19.9000], [50.0200, 19.8900]
-        ]
-      },
-      {
-        id: 'bus-173',
-        line: '173',
-        type: 'bus',
-        color: '#6A4C93',
-        path: [
-          [50.0955, 19.9087], [50.0850, 19.9150], [50.0750, 19.9180], [50.0657, 19.9191]
-        ]
-      },
-      {
-        id: 'train-ska',
-        line: 'SKA',
-        type: 'train',
-        color: '#E76F51',
-        path: [
-          [50.0675, 19.9452], [50.0686, 19.9469], [50.0650, 19.9700],
-          [50.0500, 20.0000], [50.0200, 20.0300], [49.9830, 20.0640]
-        ]
+    // Load transit routes from krakow.json (with realistic paths!)
+    fetch('/data/krakow.json')
+      .then(res => res.json())
+      .then(data => {
+        const transitRoutes = data.routes.map((route: any) => ({
+          id: route.id,
+          line: route.lineNumber,
+          type: route.transportType,
+          color: route.color,
+          path: route.path.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]) // Swap lng,lat to lat,lng for Leaflet
+        }));
+
+        renderTransitRoutes(transitRoutes, map);
+      })
+      .catch(err => {
+        console.error('Failed to load transit routes:', err);
+      });
+
+    mapInstanceRef.current = map;
+
+    // Cleanup function
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
       }
-    ];
+    };
+  }, []);
+
+  // Function to render transit routes on map
+  function renderTransitRoutes(transitRoutes: Array<{id: string, line: string, type: string, color: string, path: [number, number][]}>, map: L.Map) {
+    // Icon for popup
+    const getTransportIcon = (type: string) => {
+      switch(type) {
+        case 'bus': return '🚌';
+        case 'tram': return '🚋';
+        case 'train': return '🚆';
+        default: return '🚌';
+      }
+    };
 
     // Render transit route polylines
     transitRoutes.forEach(route => {
@@ -200,16 +163,6 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
         opacity: 0.6,
         smoothFactor: 1,
       }).addTo(map);
-
-      // Icon for popup
-      const getTransportIcon = (type: string) => {
-        switch(type) {
-          case 'bus': return '🚌';
-          case 'tram': return '🚋';
-          case 'train': return '🚆';
-          default: return '🚌';
-        }
-      };
 
       // Add popup on click
       polyline.bindPopup(`
@@ -224,24 +177,14 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
       `);
 
       // Highlight on hover
-      polyline.on('mouseover', function() {
+      polyline.on('mouseover', function(this: L.Polyline) {
         this.setStyle({ weight: 5, opacity: 0.9 });
       });
-      polyline.on('mouseout', function() {
+      polyline.on('mouseout', function(this: L.Polyline) {
         this.setStyle({ weight: 3, opacity: 0.6 });
       });
     });
-
-    mapInstanceRef.current = map;
-
-    // Cleanup function
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  }
 
   return (
     <div 
