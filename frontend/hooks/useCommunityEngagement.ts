@@ -35,7 +35,6 @@ export function useCommunityEngagement({
     
     // First upvote after 3 seconds
     const timer1 = setTimeout(() => {
-      console.log('📈 Simulated upvote #1');
       onUpvote(reportId);
       toast.success('+1 point! Someone upvoted your report 👍', {
         duration: 2000,
@@ -45,7 +44,6 @@ export function useCommunityEngagement({
 
     // Second upvote after 6 seconds
     const timer2 = setTimeout(() => {
-      console.log('📈 Simulated upvote #2');
       onUpvote(reportId);
       toast.success('+1 point! 👍', {
         duration: 2000,
@@ -55,7 +53,6 @@ export function useCommunityEngagement({
 
     // Third upvote after 9 seconds (triggers verification)
     const timer3 = setTimeout(() => {
-      console.log('📈 Simulated upvote #3 - VERIFICATION!');
       onUpvote(reportId);
       
       // Small delay to let upvote register, then verify (no separate upvote toast)
@@ -75,10 +72,7 @@ export function useCommunityEngagement({
     
     while (currentUpvotes < totalUpvotesNeeded) {
       currentUpvotes++;
-      const upvoteNum = currentUpvotes;
-      
       const timer = setTimeout(() => {
-        console.log(`📈 Simulated upvote #${upvoteNum}`);
         onUpvote(reportId);
         toast.success('+1 point! 👍', {
           duration: 1500,
@@ -88,12 +82,10 @@ export function useCommunityEngagement({
       nextUpvoteDelay += 2500; // 2.5 seconds between each upvote
     }
 
-    // Resolution after reaching target upvotes (6th upvote)
+    // Resolution after reaching target upvotes
     const resolutionDelay = nextUpvoteDelay + 2000;
-    console.log(`⏰ Resolution scheduled in ${resolutionDelay}ms (${resolutionDelay/1000}s)`);
     
     const resolutionTimer = setTimeout(() => {
-      console.log(`🎊 RESOLVED! Report completed with ${totalUpvotesNeeded} upvotes`);
       onResolved(reportId);
       
       // Epic celebration with confetti
@@ -117,7 +109,6 @@ export function useCommunityEngagement({
 
     // Cleanup function
     return () => {
-      console.log(`🧹 Cleaning up ${timersRef.current.length} timers for report ${reportId}`);
       timersRef.current.forEach(timer => clearTimeout(timer));
       timersRef.current = [];
     };

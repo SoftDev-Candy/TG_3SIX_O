@@ -8,7 +8,7 @@ import ReportDelayForm from '@/components/forms/ReportDelayForm';
 import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSimulatedEngagement } from '@/hooks/useSimulatedEngagement';
+import { useCommunityEngagement } from '@/hooks/useCommunityEngagement';
 import { useCommunityActivity } from '@/hooks/useCommunityActivity';
 import { usePointsNotifications } from '@/hooks/usePointsNotifications';
 import { apiClient } from '@/lib/api-client';
@@ -108,7 +108,7 @@ export default function MapPage() {
     });
   }, [updateUserPoints, showResolutionToast]);
 
-  useSimulatedEngagement({
+  useCommunityEngagement({
     reportId: lastSubmittedReportId || '',
     enabled: !!lastSubmittedReportId,
     onUpvote: handleUpvote,
