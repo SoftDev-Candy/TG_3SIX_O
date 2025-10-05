@@ -4,6 +4,11 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { apiClient } from '@/lib/api-client';
 import type { User } from '@/types';
 
+// Hackathon fallback: Works without backend
+// Controlled via NEXT_PUBLIC_MOCK_AUTH_ENABLED in .env.local
+const MOCK_AUTH_ENABLED = process.env.NEXT_PUBLIC_MOCK_AUTH_ENABLED === 'true';
+const MOCK_USER_KEY = 'mock_user_data';
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -31,7 +36,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check if we have a token
+        // Check for mock user first (hackathon fallback)
+        if (MOCK_AUTH_ENABLED && typeof window !== 'undefined') {
+          const mockUserData = localStorage.getItem(MOCK_USER_KEY);
+          if (mockUserData) {
+            const mockUser = JSON.parse(mockUserData);
+            setUser(mockUser);
+            console.log('🎭 Using mock authentication for demo');
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Try real backend authentication
         const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
         
         if (token) {
@@ -46,7 +63,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        apiClient.setToken(null);
+        
+        // Fallback to mock auth if backend is down
+        if (MOCK_AUTH_ENABLED && typeof window !== 'undefined') {
+          const mockUserData = localStorage.getItem(MOCK_USER_KEY);
+          if (mockUserData) {
+            const mockUser = JSON.parse(mockUserData);
+            setUser(mockUser);
+            console.log('🎭 Backend unavailable, using mock authentication');
+          }
+        } else {
+          apiClient.setToken(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -64,9 +92,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(result.data.user);
         return { success: true };
       } else {
+        // Backend returned error - try mock auth fallback
+        if (MOCK_AUTH_ENABLED) {
+          const mockUser: User = {
+            id: 'demo-user-' + Date.now(),
+            email: email,
+            username: email.split('@')[0],
+            points: 150,
+            level: 3,
+            createdAt: new Date().toISOString(),
+          };
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+          }
+          
+          setUser(mockUser);
+          console.log('🎭 Mock login successful for demo (backend unavailable)');
+          return { success: true };
+        }
         return { success: false, error: result.error || 'Login failed' };
       }
     } catch (error) {
+      // Unexpected error - also try mock auth fallback
+      if (MOCK_AUTH_ENABLED) {
+        const mockUser: User = {
+          id: 'demo-user-' + Date.now(),
+          email: email,
+          username: email.split('@')[0],
+          points: 150,
+          level: 3,
+          createdAt: new Date().toISOString(),
+        };
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+        }
+        
+        setUser(mockUser);
+        console.log('🎭 Mock login successful for demo');
+        return { success: true };
+      }
+      
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'An unexpected error occurred' 
@@ -83,9 +150,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(result.data.user);
         return { success: true };
       } else {
+        // Backend returned error - try mock auth fallback
+        if (MOCK_AUTH_ENABLED) {
+          const mockUser: User = {
+            id: 'demo-user-' + Date.now(),
+            email: username + '@demo.com',
+            username: username,
+            points: 150,
+            level: 3,
+            createdAt: new Date().toISOString(),
+          };
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+          }
+          
+          setUser(mockUser);
+          console.log('🎭 Mock login successful for demo (backend unavailable)');
+          return { success: true };
+        }
         return { success: false, error: result.error || 'Login failed' };
       }
     } catch (error) {
+      // Unexpected error - also try mock auth fallback
+      if (MOCK_AUTH_ENABLED) {
+        const mockUser: User = {
+          id: 'demo-user-' + Date.now(),
+          email: username + '@demo.com',
+          username: username,
+          points: 150,
+          level: 3,
+          createdAt: new Date().toISOString(),
+        };
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+        }
+        
+        setUser(mockUser);
+        console.log('🎭 Mock login successful for demo');
+        return { success: true };
+      }
+      
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'An unexpected error occurred' 
@@ -102,9 +208,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(result.data.user);
         return { success: true };
       } else {
+        // Backend returned error - try mock auth fallback
+        if (MOCK_AUTH_ENABLED) {
+          const mockUser: User = {
+            id: 'demo-user-' + Date.now(),
+            email: email,
+            username: username,
+            points: 0,
+            level: 1,
+            createdAt: new Date().toISOString(),
+          };
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+          }
+          
+          setUser(mockUser);
+          console.log('🎭 Mock registration successful for demo (backend unavailable)');
+          return { success: true };
+        }
         return { success: false, error: result.error || 'Registration failed' };
       }
     } catch (error) {
+      // Unexpected error - also try mock auth fallback
+      if (MOCK_AUTH_ENABLED) {
+        const mockUser: User = {
+          id: 'demo-user-' + Date.now(),
+          email: email,
+          username: username,
+          points: 0,
+          level: 1,
+          createdAt: new Date().toISOString(),
+        };
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(MOCK_USER_KEY, JSON.stringify(mockUser));
+        }
+        
+        setUser(mockUser);
+        console.log('🎭 Mock registration successful for demo');
+        return { success: true };
+      }
+      
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'An unexpected error occurred' 
@@ -120,6 +265,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setUser(null);
       apiClient.setToken(null);
+      
+      // Clear mock user data
+      if (MOCK_AUTH_ENABLED && typeof window !== 'undefined') {
+        localStorage.removeItem(MOCK_USER_KEY);
+      }
     }
   };
 

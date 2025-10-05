@@ -11,8 +11,10 @@ import type {
   Vote,
   VoteStats,
 } from '@/types';
+import { getMockReports, addMockReport } from './mock-data';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const MOCK_DATA_ENABLED = process.env.NEXT_PUBLIC_MOCK_AUTH_ENABLED === 'true';
 
 class ApiClient {
   private baseUrl: string;
@@ -130,11 +132,45 @@ class ApiClient {
       });
     }
 
-    return this.request<DelayReport>('/api/reports', {
+    const result = await this.request<DelayReport>('/api/reports', {
       method: 'POST',
       body: formData,
       headers: {}, // Let browser set Content-Type for FormData
     });
+    
+    // Fallback to mock report creation if backend unavailable
+    if (!result.success && MOCK_DATA_ENABLED) {
+      const mockReport: DelayReport = {
+        id: 'mock-report-' + Date.now(),
+        userId: 'demo-user-' + Date.now(),
+        user: {
+          username: 'You',
+          avatar: undefined,
+        },
+        location: input.location,
+        transportType: input.transportType,
+        line: input.line,
+        vehicleNumber: input.vehicleNumber,
+        severity: input.severity,
+        category: input.category,
+        description: input.description,
+        photos: [],
+        status: 'pending',
+        upvotes: 0,
+        downvotes: 0,
+        reportedAt: new Date().toISOString(),
+      };
+      
+      addMockReport(mockReport);
+      console.log('🎭 Mock report created (backend unavailable)');
+      
+      return {
+        success: true,
+        data: mockReport,
+      };
+    }
+    
+    return result;
   }
 
   async getReports(filters?: {
@@ -145,9 +181,27 @@ class ApiClient {
     limit?: number;
   }) {
     const params = new URLSearchParams(filters as Record<string, string>);
-    return this.request<PaginatedResponse<DelayReport>>(
+    const result = await this.request<PaginatedResponse<DelayReport>>(
       `/api/reports?${params.toString()}`
     );
+    
+    // Fallback to mock data if backend unavailable
+    if (!result.success && MOCK_DATA_ENABLED) {
+      const mockReports = getMockReports();
+      console.log('🎭 Using mock reports data (backend unavailable)');
+      return {
+        success: true,
+        data: {
+          items: mockReports,
+          total: mockReports.length,
+          page: 1,
+          limit: 50,
+          hasMore: false,
+        },
+      };
+    }
+    
+    return result;
   }
 
   async getReport(id: string) {
@@ -155,10 +209,28 @@ class ApiClient {
   }
 
   async voteReport(id: string, voteType: 'upvote' | 'downvote') {
-    return this.request<{ report: DelayReport; voteStats: VoteStats }>(`/api/reports/${id}/vote`, {
+    const result = await this.request<{ report: DelayReport; voteStats: VoteStats }>(`/api/reports/${id}/vote`, {
       method: 'PATCH',
       body: JSON.stringify({ voteType }),
     });
+    
+    // Fallback to mock vote if backend unavailable
+    if (!result.success && MOCK_DATA_ENABLED) {
+      console.log('🎭 Mock vote registered (backend unavailable)');
+      return {
+        success: true,
+        data: {
+          report: {} as DelayReport,
+          voteStats: {
+            upvotes: voteType === 'upvote' ? 1 : 0,
+            downvotes: voteType === 'downvote' ? 1 : 0,
+            userVote: voteType,
+          },
+        },
+      };
+    }
+    
+    return result;
   }
 
   async getReportVoteStats(id: string) {

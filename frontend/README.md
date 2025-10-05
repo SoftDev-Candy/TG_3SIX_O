@@ -38,6 +38,7 @@ Edit `.env.local` with your configuration:
 - `NEXT_PUBLIC_API_URL` - Fastify API URL (default: http://localhost:3001)
 - `NEXT_PUBLIC_SSE_URL` - SSE endpoint for real-time updates
 - `NEXT_PUBLIC_MAP_TOKEN` - Optional Mapbox token (leave empty for OpenStreetMap)
+- `NEXT_PUBLIC_MOCK_AUTH_ENABLED` - Enable mock auth fallback for demos/hackathons (default: true)
 
 3. **Run development server:**
 
@@ -104,6 +105,31 @@ User → Next.js Frontend → Fastify API → C++ Routing Engine
 ```
 
 See `/docs/plans/nextjs-frontend-plan.md` for detailed architecture documentation.
+
+## 🎭 Hackathon Mode
+
+For demos and hackathons, the app includes a **mock authentication fallback** that works even when the backend is unavailable:
+
+```bash
+# Enable hackathon mode in .env.local
+NEXT_PUBLIC_MOCK_AUTH_ENABLED=true
+```
+
+**Features:**
+- ✅ Works without backend running
+- ✅ Any credentials will "login" successfully
+- ✅ Creates mock user with 150 points, Level 3
+- ✅ Full app functionality (reports, voting, points)
+- ✅ Session persists across page refreshes
+- ✅ Perfect for judge demos and presentations
+
+**For Production:**
+```bash
+# Disable hackathon mode
+NEXT_PUBLIC_MOCK_AUTH_ENABLED=false
+```
+
+See `/docs/HACKATHON_AUTH_FALLBACK.md` for full documentation.
 
 ## Contributing
 
