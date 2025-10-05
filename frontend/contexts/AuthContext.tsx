@@ -9,6 +9,14 @@ import type { User } from '@/types';
 const MOCK_AUTH_ENABLED = process.env.NEXT_PUBLIC_MOCK_AUTH_ENABLED === 'true';
 const MOCK_USER_KEY = 'mock_user_data';
 
+// Default mock user data (single source of truth)
+const DEFAULT_MOCK_USER = {
+  username: '@13inh',
+  email: 'hello@13inh.com',
+  points: 239,
+  level: 3,
+} as const;
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -97,10 +105,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (MOCK_AUTH_ENABLED) {
           const mockUser: User = {
             id: 'demo-user-' + Date.now(),
-            email: email,
-            username: email.split('@')[0],
-            points: 150,
-            level: 3,
+            email: DEFAULT_MOCK_USER.email,
+            username: DEFAULT_MOCK_USER.username,
+            points: DEFAULT_MOCK_USER.points,
+            level: DEFAULT_MOCK_USER.level,
             createdAt: new Date().toISOString(),
           };
           
@@ -119,10 +127,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (MOCK_AUTH_ENABLED) {
         const mockUser: User = {
           id: 'demo-user-' + Date.now(),
-          email: email,
-          username: email.split('@')[0],
-          points: 150,
-          level: 3,
+          email: DEFAULT_MOCK_USER.email,
+          username: DEFAULT_MOCK_USER.username,
+          points: DEFAULT_MOCK_USER.points,
+          level: DEFAULT_MOCK_USER.level,
           createdAt: new Date().toISOString(),
         };
         
@@ -155,10 +163,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (MOCK_AUTH_ENABLED) {
           const mockUser: User = {
             id: 'demo-user-' + Date.now(),
-            email: username + '@demo.com',
-            username: username,
-            points: 150,
-            level: 3,
+            email: DEFAULT_MOCK_USER.email,
+            username: DEFAULT_MOCK_USER.username,
+            points: DEFAULT_MOCK_USER.points,
+            level: DEFAULT_MOCK_USER.level,
             createdAt: new Date().toISOString(),
           };
           
@@ -177,10 +185,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (MOCK_AUTH_ENABLED) {
         const mockUser: User = {
           id: 'demo-user-' + Date.now(),
-          email: username + '@demo.com',
-          username: username,
-          points: 150,
-          level: 3,
+          email: DEFAULT_MOCK_USER.email,
+          username: DEFAULT_MOCK_USER.username,
+          points: DEFAULT_MOCK_USER.points,
+          level: DEFAULT_MOCK_USER.level,
           createdAt: new Date().toISOString(),
         };
         
