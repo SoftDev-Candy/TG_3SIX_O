@@ -32,12 +32,14 @@ interface LeafletMapProps {
   className?: string;
   incidents?: DelayIncident[];
   currentUserId?: string;
+  onMapReady?: (updateRouteColor: (lineNumber: string, status: 'delayed' | 'resolved') => void) => void;
 }
 
-export default function LeafletMap({ className = '', incidents = [], currentUserId }: LeafletMapProps) {
+export default function LeafletMap({ className = '', incidents = [], currentUserId, onMapReady }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const incidentMarkersRef = useRef<L.Marker[]>([]);
+  const routePolylinesRef = useRef<Map<string, {polyline: L.Polyline, type: string}>>(new Map());
 
   // Helper function for transport icons
   const getTransportIcon = (type: string) => {
@@ -71,19 +73,13 @@ export default function LeafletMap({ className = '', incidents = [], currentUser
       position: 'bottomright'
     }).addTo(map);
 
-    // Sample public transport delay markers (will be replaced with real data)
+    // Keep 2 sample delays matching seeded reports (Line 8, Line 194)
     const sampleDelays = [
-      { lat: 50.0675, lng: 19.9452, severity: 'severe', type: 'bus', description: 'Bus 52 - 15min delay', line: '52' },
-      { lat: 50.0619, lng: 19.9368, severity: 'moderate', type: 'tram', description: 'Tram 8 - 8min delay', line: '8' },
-      { lat: 50.0686, lng: 19.9469, severity: 'minor', type: 'train', description: 'Train to Wieliczka - 3min delay', line: 'SKA' },
-      { lat: 50.0693, lng: 19.9534, severity: 'moderate', type: 'tram', description: 'Tram 10 - 5min delay', line: '10' },
-      { lat: 50.0650, lng: 19.9413, severity: 'severe', type: 'tram', description: 'Tram 4 - 12min delay', line: '4' },
-      { lat: 50.0657, lng: 19.9191, severity: 'minor', type: 'bus', description: 'Bus 173 - 2min delay', line: '173' },
-      // Tauron Arena Tram 52 marker hidden - will show when user reports it
-      // { lat: 50.067472, lng: 19.991694, severity: 'moderate', type: 'tram', description: 'Tram 52 - 7min delay', line: '52' },
+      { lat: 50.0619, lng: 19.9368, severity: 'moderate', type: 'tram', description: 'Tram 8 - Door malfunction', line: '8' },
+      { lat: 50.0778, lng: 19.8956, severity: 'minor', type: 'bus', description: 'Bus 194 - Crowded', line: '194' },
     ];
 
-    // Add delay markers with light mode colors only
+    // Add delay markers with light mode colors only (now empty, markers come from incidents prop)
     sampleDelays.forEach(delay => {
       // Severity colors (Map UI Specification)
       const getSeverityColor = (severity: string) => {
@@ -201,9 +197,14 @@ export default function LeafletMap({ className = '', incidents = [], currentUser
 
         console.log(`Loaded ${tramData.routes.length} tram routes + ${busData.routes.length} bus routes`);
 
-        // Render routes and stops
+        // Render routes and stops (use sampleDelays to color Line 8 and Line 194 as red)
         renderTransitRoutes(transitRoutes, map, sampleDelays);
         renderStopMarkers(transitRoutes, map);
+        
+        // Provide route update function to parent
+        if (onMapReady) {
+          onMapReady(updateRouteColor);
+        }
       })
       .catch(err => {
         console.error('Failed to load transit routes:', err);
@@ -265,6 +266,9 @@ export default function LeafletMap({ className = '', incidents = [], currentUser
         opacity: routeOpacity,
         smoothFactor: 1,
       }).addTo(map);
+      
+      // Store polyline reference for dynamic updates
+      routePolylinesRef.current.set(route.line, { polyline, type: route.type });
 
       // Add popup on click
       const statusBadge = routeHasDelays 
@@ -490,6 +494,42 @@ export default function LeafletMap({ className = '', incidents = [], currentUser
       incidentMarkersRef.current.push(marker);
     });
   }, [incidents]);
+
+  // Function to update specific route color dynamically
+  const updateRouteColor = (lineNumber: string, status: 'delayed' | 'resolved') => {
+    const routeData = routePolylinesRef.current.get(lineNumber);
+    if (!routeData) {
+      console.warn(`Route ${lineNumber} not found`);
+      return;
+    }
+    
+    const { polyline, type } = routeData;
+    const color = status === 'resolved' ? '#10B981' : '#EF4444'; // Green : Red
+    const weight = 3;
+    const opacity = 0.7;
+    
+    // Update polyline style
+    polyline.setStyle({ color, weight, opacity });
+    
+    // Update popup badge
+    const statusBadge = status === 'resolved'
+      ? '<span style="background: #D1FAE5; color: #065F46; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">RESOLVED</span>'
+      : '<span style="background: #FEE2E2; color: #991B1B; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">HAS DELAYS</span>';
+    
+    polyline.setPopupContent(`
+      <div style="font-size: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <span style="font-size: 18px;">${getTransportIcon(type)}</span>
+          <strong style="text-transform: capitalize;">${type} Line ${lineNumber}</strong>
+        </div>
+        ${statusBadge}
+        <div style="height: 3px; background-color: ${color}; border-radius: 2px; margin: 8px 0;"></div>
+        <div style="font-size: 12px; color: #666;">${status === 'resolved' ? 'Issue resolved!' : 'Experiencing delays'}</div>
+      </div>
+    `);
+    
+    console.log(`🎨 Updated Line ${lineNumber} to ${status} (color: ${color})`);
+  };
 
   return (
     <div 

@@ -12,6 +12,8 @@ interface CommunityEngagementOptions {
   onUpvote: (reportId: string) => void;
   onVerified: (reportId: string) => void;
   onResolved: (reportId: string) => void;
+  onRevealHiddenReport?: () => void;
+  onLine52Resolved?: () => void;
   enabled?: boolean;
 }
 
@@ -20,6 +22,8 @@ export function useCommunityEngagement({
   onUpvote,
   onVerified,
   onResolved,
+  onRevealHiddenReport,
+  onLine52Resolved,
   enabled = true,
 }: CommunityEngagementOptions) {
   const timersRef = useRef<NodeJS.Timeout[]>([]);
@@ -59,6 +63,11 @@ export function useCommunityEngagement({
       setTimeout(() => {
         onVerified(reportId);
         
+        // Reveal hidden report-2 to show community validation
+        if (onRevealHiddenReport) {
+          onRevealHiddenReport();
+        }
+        
         toast.success(`✅ Report Verified! +3 points total`, {
           duration: 2500,
         });
@@ -87,6 +96,11 @@ export function useCommunityEngagement({
     
     const resolutionTimer = setTimeout(() => {
       onResolved(reportId);
+      
+      // Update Line 52 route to green
+      if (onLine52Resolved) {
+        onLine52Resolved();
+      }
       
       // Epic celebration with confetti
       confetti({

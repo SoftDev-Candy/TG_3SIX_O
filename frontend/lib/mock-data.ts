@@ -78,7 +78,7 @@ export const mockReports: DelayReport[] = [
     description: 'Signal failure at intersection. Multiple trams backed up in both directions.',
     photos: [],
     status: 'verified',
-    upvotes: 24,
+    upvotes: 6,
     downvotes: 0,
     reportedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
     verifiedBy: ['user-1', 'user-3'],

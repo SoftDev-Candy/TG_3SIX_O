@@ -51,9 +51,11 @@ export default function MapPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('map');
   const [reports, setReports] = useState<DelayReport[]>([]);
+  const [hiddenReportIds, setHiddenReportIds] = useState<string[]>(['report-2']); // Hide report-2 for demo
   const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pointsAwardedRef = useRef(false); // Track if points already awarded
+  const updateRouteColorRef = useRef<((lineNumber: string, status: 'delayed' | 'resolved') => void) | null>(null);
   
   const { user, isAuthenticated, updateUserPoints } = useAuth();
   const { showPointsToast, showVerificationToast, showResolutionToast } = usePointsNotifications();
@@ -97,6 +99,25 @@ export default function MapPage() {
     ));
   }, []);
 
+  const handleRevealHiddenReport = useCallback(() => {
+    // Reveal report-2 on verification to show community validation
+    setHiddenReportIds(prev => prev.filter(id => id !== 'report-2'));
+    console.log('🎯 Revealing hidden report-2 - community validation!');
+  }, []);
+
+  const handleLine52Resolved = useCallback(() => {
+    // Update Line 52 route color to green
+    if (updateRouteColorRef.current) {
+      updateRouteColorRef.current('52', 'resolved');
+      console.log('✅ Line 52 marked as RESOLVED - route turned green!');
+    }
+  }, []);
+
+  const handleMapReady = useCallback((updateFn: (lineNumber: string, status: 'delayed' | 'resolved') => void) => {
+    updateRouteColorRef.current = updateFn;
+    console.log('🗺️ Map ready - route update function available');
+  }, []);
+
   // Track community engagement on user's submitted report
   useCommunityEngagement({
     reportId: lastSubmittedReportId || '',
@@ -104,6 +125,8 @@ export default function MapPage() {
     onUpvote: handleUpvote,
     onVerified: handleVerified,
     onResolved: handleResolved,
+    onRevealHiddenReport: handleRevealHiddenReport,
+    onLine52Resolved: handleLine52Resolved,
   });
 
   // Update points when user's report is resolved
@@ -135,6 +158,13 @@ export default function MapPage() {
       if (response.success && response.data) {
         // Add to top of list
         setReports(prev => [response.data!, ...prev]);
+        
+        // If Line 52 reported, turn route red immediately
+        if (response.data.line === '52' && updateRouteColorRef.current) {
+          updateRouteColorRef.current('52', 'delayed');
+          console.log('🔴 Line 52 reported - route turned red!');
+        }
+        
         // Show success toast
         toast.success('+3 points! Report submitted 🎉', {
           duration: 4000,
@@ -203,6 +233,7 @@ export default function MapPage() {
   // Transform reports into map incidents
   const mapIncidents = reports
     .filter(report => report.transportType !== 'metro') // Filter out metro (not supported by map)
+    .filter(report => !hiddenReportIds.includes(report.id)) // Hide demo reports initially
     .map(report => ({
       id: report.id,
       lat: report.location.lat,
@@ -213,6 +244,7 @@ export default function MapPage() {
       description: report.description,
       severity: report.severity,
       category: report.category,
+      status: report.status,
       reportedBy: report.userId, // Use userId for comparison
       reportedByUsername: report.user?.username || 'Anonymous', // Username for display
       reportedAt: report.reportedAt,
@@ -222,7 +254,12 @@ export default function MapPage() {
   return (
     <div className="relative h-screen w-full overflow-hidden">
       {/* Full Viewport Leaflet Map */}
-      <LeafletMap className="absolute inset-0" incidents={mapIncidents} currentUserId={user?.id} />
+      <LeafletMap 
+        className="absolute inset-0" 
+        incidents={mapIncidents} 
+        currentUserId={user?.id}
+        onMapReady={handleMapReady}
+      />
       
       {/* Map Overlay for better button visibility */}
       <div className="absolute inset-0 pointer-events-none">
@@ -416,7 +453,7 @@ export default function MapPage() {
       {/* Live Delays Panel */}
       {showStats && (
         <LiveDelaysPanel
-          reports={reports}
+          reports={reports.filter(r => !hiddenReportIds.includes(r.id))}
           onVote={handleVote}
           onClose={() => {
             setShowStats(false);
