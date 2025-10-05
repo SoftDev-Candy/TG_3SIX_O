@@ -73,18 +73,12 @@ export default function MapPage() {
   useSimulatedEngagement({
     reportId: lastSubmittedReportId || '',
     enabled: !!lastSubmittedReportId,
-    onUpvote: async (reportId) => {
-      try {
-        // Simulate upvote from community
-        await apiClient.voteReport(reportId, 'upvote');
-        
-        // Update local state
-        setReports(prev => prev.map(r =>
-          r.id === reportId ? { ...r, upvotes: r.upvotes + 1 } : r
-        ));
-      } catch (error) {
-        console.error('Simulated upvote failed:', error);
-      }
+    onUpvote: (reportId) => {
+      // Update local state immediately (simulated community upvote)
+      setReports(prev => prev.map(r =>
+        r.id === reportId ? { ...r, upvotes: r.upvotes + 1 } : r
+      ));
+      console.log(`📈 Upvote count updated for report ${reportId}`);
     },
     onVerified: (reportId) => {
       // Update status to verified
@@ -113,7 +107,7 @@ export default function MapPage() {
     setIsSubmitting(true);
     
     try {
-      const response = await apiClient.createReport(data);
+      const response = await apiClient.createReport(data, user?.id);
       
       if (response.success && response.data) {
         // Add to top of list
@@ -121,7 +115,6 @@ export default function MapPage() {
         
         // Show success toast
         toast.success('+3 points! Report submitted 🎉', {
-          description: 'Your community will help verify it!',
           duration: 4000,
         });
         
@@ -164,9 +157,19 @@ export default function MapPage() {
             : r
         ));
         
-        toast.success('+0.5 points for helpful vote! 👍', {
-          duration: 3000,
-        });
+        // Show appropriate message based on vote action
+        const voteAction = response.data.voteStats.userVote;
+        if (voteAction) {
+          toast.success('+0.5 points for helpful vote! 👍', {
+            duration: 3000,
+          });
+        } else {
+          toast.info('Vote removed', {
+            duration: 2000,
+          });
+        }
+      } else {
+        toast.error('Failed to vote');
       }
     } catch (error) {
       toast.error('Failed to vote');

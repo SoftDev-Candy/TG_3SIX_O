@@ -82,7 +82,8 @@ export default function VoteButtons({
         )}
         onClick={() => handleVote('upvote')}
         disabled={disabled || isVoting}
-        aria-label={`Upvote report (${voteStats.upvotes} upvotes)`}
+        aria-label={upvoteActive ? `Remove upvote (${voteStats.upvotes} upvotes)` : `Upvote report (${voteStats.upvotes} upvotes)`}
+        title={upvoteActive ? 'Click to remove upvote' : 'Click to upvote'}
       >
         <ChevronUp className={cn(iconSizes[size], upvoteActive && 'stroke-2')} />
       </Button>
@@ -114,7 +115,8 @@ export default function VoteButtons({
         )}
         onClick={() => handleVote('downvote')}
         disabled={disabled || isVoting}
-        aria-label={`Downvote report (${voteStats.downvotes} downvotes)`}
+        aria-label={downvoteActive ? `Remove downvote (${voteStats.downvotes} downvotes)` : `Downvote report (${voteStats.downvotes} downvotes)`}
+        title={downvoteActive ? 'Click to remove downvote' : 'Click to downvote'}
       >
         <ChevronDown className={cn(iconSizes[size], downvoteActive && 'stroke-2')} />
       </Button>

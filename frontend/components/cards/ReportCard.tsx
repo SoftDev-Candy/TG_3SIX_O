@@ -54,6 +54,15 @@ export default function ReportCard({
 
   const isOwnReport = currentUserId === report.userId;
   const StatusIcon = statusConfig[report.status].icon;
+  
+  // Determine if report is in "verifying" state (pending with upvotes)
+  const isVerifying = report.status === 'pending' && report.upvotes > 0;
+  const statusDisplay = isVerifying 
+    ? { icon: AlertCircle, color: 'text-blue-600', label: `Verifying` }
+    : statusConfig[report.status];
+  
+  // Show vote count for verified reports too
+  const showVoteCount = (report.status === 'verified' || report.status === 'resolved') && report.upvotes > 0;
 
   const handleImageError = (imageUrl: string) => {
     setImageError(prev => new Set([...prev, imageUrl]));
@@ -61,8 +70,18 @@ export default function ReportCard({
 
   if (compact) {
     return (
-      <Card className="w-full">
+      <Card className={cn(
+        "w-full transition-all",
+        isOwnReport && "ring-2 ring-blue-500 bg-blue-50/30"
+      )}>
         <CardContent className="p-4">
+          {isOwnReport && (
+            <div className="flex items-center gap-1 mb-2">
+              <Badge className="bg-blue-600 text-white text-[10px] px-2 py-0.5">
+                Your Report
+              </Badge>
+            </div>
+          )}
           <div className="flex gap-3">
             {/* Transport Icon & Line */}
             <div className="flex-shrink-0 text-center">
@@ -71,7 +90,7 @@ export default function ReportCard({
               </div>
               <div className="flex flex-col gap-1">
                 <Badge variant="outline" className="text-xs px-1 py-0">
-                  {report.line}
+                  Line {report.line}
                 </Badge>
                 {report.vehicleNumber && (
                   <Badge variant="secondary" className="text-[10px] px-1 py-0">
@@ -87,9 +106,12 @@ export default function ReportCard({
                 <Badge className={cn('text-xs', severityConfig[report.severity].color)}>
                   {severityConfig[report.severity].label}
                 </Badge>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <StatusIcon className={cn('h-3 w-3', statusConfig[report.status].color)} />
-                  {statusConfig[report.status].label}
+                <div className="flex items-center gap-1 text-xs">
+                  <statusDisplay.icon className={cn('h-3 w-3', statusDisplay.color)} />
+                  <span className={statusDisplay.color}>{statusDisplay.label}</span>
+                  {(isVerifying || showVoteCount) && (
+                    <span className="font-semibold text-green-700">+{report.upvotes}</span>
+                  )}
                 </div>
               </div>
 
@@ -113,11 +135,17 @@ export default function ReportCard({
             {/* Voting */}
             {showVoting && !isOwnReport && (
               <div className="flex-shrink-0">
-                <CompactVoteButtons
-                  reportId={report.id}
-                  voteStats={voteStats}
-                  onVote={onVote}
-                />
+                {report.status === 'pending' ? (
+                  <CompactVoteButtons
+                    reportId={report.id}
+                    voteStats={voteStats}
+                    onVote={onVote}
+                  />
+                ) : (
+                  <div className="text-[10px] text-gray-500 text-center px-2">
+                    Voting<br/>closed
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -127,11 +155,21 @@ export default function ReportCard({
   }
 
   return (
-    <Card className="w-full">
+    <Card className={cn(
+      "w-full transition-all",
+      isOwnReport && "ring-2 ring-blue-500 bg-blue-50/30"
+    )}>
       <CardContent className="p-6">
+        {isOwnReport && (
+          <div className="flex items-center gap-1 mb-4">
+            <Badge className="bg-blue-600 text-white text-xs px-2 py-1">
+              Your Report
+            </Badge>
+          </div>
+        )}
         <div className="flex gap-4">
           {/* Voting Column (Desktop) */}
-          {showVoting && !isOwnReport && (
+          {showVoting && !isOwnReport && report.status === 'pending' && (
             <div className="hidden sm:block flex-shrink-0">
               <VoteButtons
                 reportId={report.id}
@@ -169,15 +207,18 @@ export default function ReportCard({
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
-                      <StatusIcon className={cn('h-4 w-4', statusConfig[report.status].color)} />
-                      {statusConfig[report.status].label}
+                      <statusDisplay.icon className={cn('h-4 w-4', statusDisplay.color)} />
+                      <span className={statusDisplay.color}>{statusDisplay.label}</span>
+                      {(isVerifying || showVoteCount) && (
+                        <span className="font-semibold text-green-700">+{report.upvotes}</span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Mobile Voting */}
-              {showVoting && !isOwnReport && (
+              {showVoting && !isOwnReport && report.status === 'pending' && (
                 <div className="sm:hidden">
                   <CompactVoteButtons
                     reportId={report.id}

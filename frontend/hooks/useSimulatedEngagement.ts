@@ -32,7 +32,6 @@ export function useSimulatedEngagement({
       console.log('📈 Simulated upvote #1');
       onUpvote(reportId);
       toast.success('+1 point! Someone upvoted your report 👍', {
-        description: 'Your community is engaged!',
         duration: 3000,
       });
     }, 5000);
@@ -42,7 +41,6 @@ export function useSimulatedEngagement({
       console.log('📈 Simulated upvote #2');
       onUpvote(reportId);
       toast.success('+1 point! 👍', {
-        description: 'Another commuter confirmed your report',
         duration: 3000,
       });
     }, 10000);
@@ -64,8 +62,11 @@ export function useSimulatedEngagement({
           colors: ['#10b981', '#3b82f6', '#f59e0b'],
         });
 
-        toast.success('+2 bonus points! Report Verified! ✅', {
-          description: 'Your report was confirmed by the community',
+        // Calculate total points earned
+        // 1 base point + 3 upvotes (1 point each) + 2 verification bonus = 6 points total
+        const totalPoints = 1 + 3 + 2; // base + upvotes + verification bonus
+        
+        toast.success(`🎉 You earned ${totalPoints} points! Report Verified! ✅`, {
           duration: 5000,
           className: 'text-lg font-semibold',
         });

@@ -12,6 +12,7 @@ import type {
   VoteStats,
 } from '@/types';
 import { getMockReports, addMockReport } from './mock-data';
+import { recordVote, hasUserVoted } from './vote-tracker';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const MOCK_DATA_ENABLED = process.env.NEXT_PUBLIC_MOCK_AUTH_ENABLED === 'true';
@@ -112,7 +113,7 @@ class ApiClient {
   }
 
   // Report endpoints
-  async createReport(input: CreateReportInput) {
+  async createReport(input: CreateReportInput, currentUserId?: string) {
     const formData = new FormData();
     
     // Append non-file fields
@@ -140,11 +141,15 @@ class ApiClient {
     
     // Fallback to mock report creation if backend unavailable
     if (!result.success && MOCK_DATA_ENABLED) {
+      // Get stored mock user data
+      const mockUserData = typeof window !== 'undefined' ? localStorage.getItem('mock_user_data') : null;
+      const mockUser = mockUserData ? JSON.parse(mockUserData) : null;
+      
       const mockReport: DelayReport = {
         id: 'mock-report-' + Date.now(),
-        userId: 'demo-user-' + Date.now(),
+        userId: currentUserId || mockUser?.id || 'demo-user-' + Date.now(),
         user: {
-          username: 'You',
+          username: mockUser?.username || 'You',
           avatar: undefined,
         },
         location: input.location,
@@ -216,18 +221,31 @@ class ApiClient {
     
     // Fallback to mock vote if backend unavailable
     if (!result.success && MOCK_DATA_ENABLED) {
-      console.log('🎭 Mock vote registered (backend unavailable)');
+      const existingVote = hasUserVoted(id);
+      
+      // Record/toggle the vote in localStorage
+      recordVote(id, voteType);
+      
+      // Check new vote state after toggle
+      const newVoteState = hasUserVoted(id);
+      
+      console.log('🎭 Mock vote action (backend unavailable)');
       return {
         success: true,
         data: {
           report: {} as DelayReport,
           voteStats: {
-            upvotes: voteType === 'upvote' ? 1 : 0,
-            downvotes: voteType === 'downvote' ? 1 : 0,
-            userVote: voteType,
+            upvotes: newVoteState === 'upvote' ? 1 : 0,
+            downvotes: newVoteState === 'downvote' ? 1 : 0,
+            userVote: newVoteState,
           },
         },
       };
+    }
+    
+    // Record vote in tracker if successful (for persistence)
+    if (result.success && MOCK_DATA_ENABLED) {
+      recordVote(id, voteType);
     }
     
     return result;

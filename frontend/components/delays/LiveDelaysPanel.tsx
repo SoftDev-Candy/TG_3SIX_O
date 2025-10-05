@@ -10,10 +10,11 @@ import { DelayReport, VoteStats } from '@/types';
 import ReportCard from '../cards/ReportCard';
 import { X, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { hasUserVoted } from '@/lib/vote-tracker';
 
 interface LiveDelaysPanelProps {
   reports: DelayReport[];
-  onVote: (reportId: string, voteType: 'upvote' | 'downvote') => void;
+  onVote: (reportId: string, voteType: 'upvote' | 'downvote') => Promise<void>;
   onClose: () => void;
   currentUserId?: string;
 }
@@ -26,15 +27,46 @@ export default function LiveDelaysPanel({
 }: LiveDelaysPanelProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
+  // Helper to determine if report is verifying
+  const isVerifying = (report: DelayReport) => report.status === 'pending' && report.upvotes > 0;
+  
+  // Filter reports by status
   const filteredReports = reports.filter(report => {
     if (filterStatus === 'all') return true;
+    if (filterStatus === 'verifying') return isVerifying(report);
+    if (filterStatus === 'pending') return report.status === 'pending' && report.upvotes === 0;
     return report.status === filterStatus;
+  });
+
+  // Sort reports by priority
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    // 1. User's own reports first
+    const aIsOwn = a.userId === currentUserId;
+    const bIsOwn = b.userId === currentUserId;
+    if (aIsOwn && !bIsOwn) return -1;
+    if (!aIsOwn && bIsOwn) return 1;
+    
+    // 2. Then by status priority: pending (no votes) > verifying > verified > resolved
+    const getStatusPriority = (report: DelayReport) => {
+      if (report.status === 'pending' && report.upvotes === 0) return 1; // New pending
+      if (isVerifying(report)) return 2; // Verifying
+      if (report.status === 'verified') return 3; // Verified
+      if (report.status === 'resolved') return 4; // Resolved
+      return 5;
+    };
+    
+    const aPriority = getStatusPriority(a);
+    const bPriority = getStatusPriority(b);
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    
+    // 3. Within same priority, newest first
+    return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime();
   });
 
   const stats = {
     total: reports.length,
-    pending: reports.filter(r => r.status === 'pending').length,
-    verified: reports.filter(r => r.status === 'verified').length,
+    pending: reports.filter(r => r.status === 'pending' && r.upvotes === 0).length,
+    verifying: reports.filter(r => isVerifying(r)).length,
     resolved: reports.filter(r => r.status === 'resolved').length,
   };
 
@@ -62,18 +94,18 @@ export default function LiveDelaysPanel({
             <div className="text-xs text-gray-500">Pending</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.verified}</div>
-            <div className="text-xs text-gray-500">Verified</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.verifying}</div>
+            <div className="text-xs text-gray-500">Verifying</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.resolved}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
             <div className="text-xs text-gray-500">Resolved</div>
           </div>
         </div>
 
         {/* Filter Tabs */}
         <div className="flex gap-2 px-4 py-2 border-b border-gray-100 overflow-x-auto shrink-0">
-          {['all', 'pending', 'verified', 'resolved'].map(status => (
+          {['all', 'pending', 'verifying', 'resolved'].map(status => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
@@ -90,14 +122,14 @@ export default function LiveDelaysPanel({
 
         {/* Reports List - Scrollable */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
-          {filteredReports.length === 0 ? (
+          {sortedReports.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No {filterStatus !== 'all' ? filterStatus : ''} reports yet</p>
               <p className="text-sm mt-1">Be the first to report a delay!</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {filteredReports.map((report) => (
+              {sortedReports.map((report) => (
                 <motion.div
                   key={report.id}
                   initial={{ opacity: 0, y: -10 }}
@@ -111,9 +143,9 @@ export default function LiveDelaysPanel({
                       upvotes: report.upvotes,
                       downvotes: report.downvotes,
                       netScore: report.upvotes - report.downvotes,
-                      userVote: null, // TODO: Get from user votes
+                      userVote: hasUserVoted(report.id),
                     }}
-                    onVote={(voteType) => onVote(report.id, voteType)}
+                    onVote={async (reportId, voteType) => onVote(reportId, voteType)}
                     compact
                     showVoting={true}
                     currentUserId={currentUserId}
