@@ -20,3 +20,12 @@ nlohmann::json library
 
 Installation and demo 
 (COMING SOON)
+
+-------
+How to run Python backend:
+
+make sure your venv is active and you have all modules installed <br>
+navigate to ./pythonsrc/UserAPI/ <br>
+python main.py <br>
+in order to view api docs goto <br>
+go to http://127.0.0.1:8000/docs/ <br>
