@@ -68,8 +68,8 @@
 <body>
     <div id="controls">
         <div>
-            <label>Src: <input id="src" type="number" value="0" min="0" max="7" /></label>
-            <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="7" /></label>
+            <label>Src: <input id="src" type="number" value="0" min="0" max="9" /></label>
+            <label style="margin-left:8px">Dst: <input id="dst" type="number" value="5" min="0" max="9" /></label>
             <button id="routeBtn" class="btn">Compute Route</button>
             <button id="monitorBtn" class="btn">Monitor this route (threshold: <input id="monitorThreshold" type="number" value="3" min="1" style="width:60px"> min)</button>
 
@@ -197,8 +197,10 @@
             [50.0644, 19.9894],
             [50.0676, 19.9888],
             [50.0676, 19.9903],
-            [50.0676, 19.9888],
-            [50.0676, 19.9903]
+            [50.0732, 19.9860],
+            [50.0714, 19.9835],
+            [50.0697, 19.9866],
+            [50.0685, 19.9884]
         ];
 
         /* draw static node markers & edges for context */
@@ -207,15 +209,39 @@
             const m = L.circleMarker(nodes[i], { radius: 7, color: '#222', fillColor: '#fff', fillOpacity: 1 }).addTo(map).bindPopup("Node " + i);
             nodeMarkers.push(m);
         }
+        // --- explicit edge list that matches server build_demo_graph() ---
+        // Perimeter edges (only these get the grey background)
+        // and two interior connectors (comment out if you DO NOT want them)
         const edges = [
-            [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0],
-            // interior connectors to create alternatives (avoid hypotenuse)
-            [1, 5], [7, 3]
+            [0, 6], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5],[6, 7], [7, 8],[8,9],[9,4]
+            // optional connectors: include only if you WANT these shown
+            // [1,5], [7,3]
         ];
+
+        // Keep references if you want to remove them later
+        const backgroundEdgeLayers = [];
+
+        backgroundEdgeLayers.forEach(l => { try { map.removeLayer(l); } catch (e) { } });
+        backgroundEdgeLayers.length = 0;
+
+        // Draw edges: perimeter solid grey, connectors dashed (or comment connectors out)
         edges.forEach(e => {
-            const a = nodes[e[0]], b = nodes[e[1]];
-            L.polyline([a, b], { color: '#888', weight: 2, opacity: 0.6 }).addTo(map);
+            const a = nodes[e[0]];
+            const b = nodes[e[1]];
+            if (!a || !b) return;
+
+            const isConnector =
+                (e[0] === 1 && e[1] === 5) || (e[0] === 5 && e[1] === 1) ||
+                (e[0] === 7 && e[1] === 3) || (e[0] === 3 && e[1] === 7);
+
+            const opts = isConnector
+                ? { color: '#cc8800', dashArray: '6,6', weight: 2, opacity: 0.6 } // connector style
+                : { color: '#888', weight: 2, opacity: 0.6 };                     // perimeter style
+
+            const pl = L.polyline([a, b], opts).addTo(map);
+            backgroundEdgeLayers.push(pl);
         });
+
 
         /* =========================
            UI helpers

@@ -77,6 +77,21 @@ Desktop.ini
 .DS_Store
 
 # ----------------------
+# Node.js / Next.js
+# ----------------------
+frontend/node_modules/
+frontend/.next/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+
+# ----------------------
 # App-specific
 # ----------------------
 todos.txt
