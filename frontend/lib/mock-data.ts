@@ -13,9 +13,9 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-2',
-    email: 'marek@krakow.com',
-    username: 'marek_commuter',
-    points: 280,
+    email: 'hello@13inh.com',
+    username: '13inh',
+    points: 239,
     level: 4,
     createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -61,7 +61,7 @@ export const mockReports: DelayReport[] = [
     id: 'report-2',
     userId: 'user-2',
     user: {
-      username: 'marek_commuter',
+      username: '13inh',
       avatar: undefined,
     },
     location: {

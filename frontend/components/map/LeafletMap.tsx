@@ -23,6 +23,7 @@ interface DelayIncident {
   severity: 'minor' | 'moderate' | 'severe';
   category?: string;
   reportedBy?: string;
+  reportedByUsername?: string;
   reportedAt?: string;
   upvotes?: number;
 }
@@ -477,7 +478,7 @@ export default function LeafletMap({ className = '', incidents = [], currentUser
             
             <!-- Footer -->
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6B7280; padding-top: 6px; border-top: 1px solid #F3F4F6;">
-              ${incident.reportedBy ? `<div>👤 ${incident.reportedBy}</div>` : '<div></div>'}
+              ${incident.reportedByUsername ? `<div>👤 ${incident.reportedByUsername}</div>` : '<div></div>'}
               <div style="display: flex; gap: 8px; align-items: center;">
                 ${incident.upvotes ? `<span>👍 ${incident.upvotes}</span>` : ''}
                 ${timeAgo ? `<span>🕒 ${timeAgo}</span>` : ''}

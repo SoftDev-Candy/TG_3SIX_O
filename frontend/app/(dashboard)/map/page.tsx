@@ -214,6 +214,7 @@ export default function MapPage() {
       severity: report.severity,
       category: report.category,
       reportedBy: report.userId, // Use userId for comparison
+      reportedByUsername: report.user?.username || 'Anonymous', // Username for display
       reportedAt: report.reportedAt,
       upvotes: report.upvotes,
     }));
