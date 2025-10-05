@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { AnimatePresence } from 'framer-motion';
 import ReportDelayForm from '@/components/forms/ReportDelayForm';
 import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
+import ProfilePanel from '@/components/profile/ProfilePanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCommunityEngagement } from '@/hooks/useCommunityEngagement';
@@ -45,6 +47,7 @@ export default function MapPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('map');
   const [reports, setReports] = useState<DelayReport[]>([]);
   const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
@@ -379,15 +382,12 @@ export default function MapPage() {
             }`}
             onClick={() => {
               setActiveTab('profile');
-              if (isAuthenticated) {
-                // TODO: Show profile panel
-                console.log('Show profile');
-              } else {
-                window.location.href = '/login';
-              }
+              setShowProfile(!showProfile);
+              setShowStats(false);
+              setShowMobileMenu(false);
             }}
           >
-            <UserCircle className="w-6 h-6 mb-1" />
+            <User className="w-6 h-6 mb-1" />
             <span className="text-xs font-medium">Profile</span>
           </button>
         </div>
@@ -435,6 +435,19 @@ export default function MapPage() {
           currentUserId={user?.id}
         />
       )}
+
+      {/* Profile Panel */}
+      <AnimatePresence>
+        {showProfile && (
+          <ProfilePanel
+            user={user}
+            onClose={() => {
+              setShowProfile(false);
+              setActiveTab('map');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Filters Panel */}
       {showFilters && (
