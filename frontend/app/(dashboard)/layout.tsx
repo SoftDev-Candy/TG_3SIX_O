@@ -19,7 +19,8 @@ import {
   History,
   Menu,
   X,
-  LogIn
+  LogIn,
+  Gift
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Report Delay', href: '/report', icon: FileText },
   { name: 'Route Planner', href: '/routes', icon: Route },
   { name: 'My History', href: '/history', icon: History },
+  { name: 'Rewards', href: '/rewards', icon: Gift },
   { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
   { name: 'Profile', href: '/profile', icon: User },
 ];

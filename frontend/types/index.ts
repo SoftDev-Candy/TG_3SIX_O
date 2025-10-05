@@ -121,6 +121,40 @@ export interface Reward {
   imageUrl?: string;
 }
 
+// Offers & Redemption types
+export type OfferCategory = 'transit' | 'food' | 'entertainment' | 'shopping';
+export type RedemptionStatus = 'active' | 'used' | 'expired';
+
+export interface Offer {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  partnerLogo?: string;
+  title: string;
+  description: string;
+  category: OfferCategory;
+  pointsCost: number;
+  termsAndConditions?: string;
+  stockAvailable: number | null; // null = unlimited
+  expiryDays: number; // days until redeemed code expires
+  isActive: boolean;
+  createdAt: string;
+  imageUrl?: string;
+}
+
+export interface Redemption {
+  id: string;
+  userId: string;
+  offerId: string;
+  offer: Offer;
+  code: string; // unique redemption code
+  redeemedAt: string;
+  expiresAt: string;
+  usedAt?: string;
+  status: RedemptionStatus;
+  pointsSpent: number;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

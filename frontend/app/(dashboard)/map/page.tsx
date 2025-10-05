@@ -51,7 +51,7 @@ export default function MapPage() {
   const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUserPoints } = useAuth();
   const { showPointsToast, showVerificationToast, showResolutionToast } = usePointsNotifications();
 
   // Fetch reports on mount
@@ -87,13 +87,27 @@ export default function MapPage() {
   }, []);
 
   const handleResolved = useCallback((reportId: string) => {
-    // Update status to resolved
-    setReports(prev => prev.map(r =>
-      r.id === reportId ? { ...r, status: 'resolved' } : r
-    ));
-  }, []);
+    // Use functional update to get current reports without dependency
+    setReports(prev => {
+      // Find the report to get upvote count
+      const report = prev.find(r => r.id === reportId);
+      if (!report) return prev;
+      
+      // Calculate total points: 1 base + upvotes + 2 first reporter bonus
+      const totalPoints = 1 + report.upvotes + 2;
+      
+      // Update user's points balance in real-time
+      updateUserPoints(totalPoints);
+      
+      showResolutionToast(totalPoints);
+      
+      // Update status to resolved
+      return prev.map(r =>
+        r.id === reportId ? { ...r, status: 'resolved' } : r
+      );
+    });
+  }, [updateUserPoints, showResolutionToast]);
 
-  // Simulated engagement for user's submitted reports
   useSimulatedEngagement({
     reportId: lastSubmittedReportId || '',
     enabled: !!lastSubmittedReportId,

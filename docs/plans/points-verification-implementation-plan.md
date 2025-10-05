@@ -10,9 +10,24 @@ This plan covers the implementation of the Points & Gamification system and Repo
 ### Current Status Analysis
 
 #### ✅ Already Implemented (Frontend)
-- **VoteButtons.tsx** - Complete upvote/downvote UI with multiple variants
+- **VoteButtons.tsx** - Complete upvote/downvote UI with emoji icons (👍 👎)
+  - Multiple variants (sm/md/lg)
+  - Vertical and horizontal orientations
+  - Active state indicators with scaling effect
+  - Mobile-optimized touch targets
 - **PointsDisplay.tsx** - Points display with level progression
 - **ReportCard.tsx** - Report cards with integrated voting
+  - Compact view with 2-row mobile-first footer
+  - Header: Transport icon + Line + Vehicle # + Severity
+  - Description: Full text with proper spacing
+  - Footer Row 1: Location + Time
+  - Footer Row 2: Vote buttons + Status/Points
+- **LeafletMap.tsx** - Interactive map with incident markers
+  - Dynamic markers from user reports
+  - Enhanced tooltips with full report details
+  - Blue border distinction for user's own reports
+  - Pulsing animations for active incidents
+  - Progressive disclosure pattern in tooltips
 - **points.ts** - Points calculation logic matching spec
 - **API Client** - Vote and points endpoints defined
 - **Types** - Complete TypeScript interfaces
@@ -23,9 +38,13 @@ This plan covers the implementation of the Points & Gamification system and Repo
 2. Database schema for votes, points, rewards
 3. Report verification workflow
 4. Spam/flag reporting system
-5. Points redemption marketplace
-6. Automated verification via dispatcher API
-7. Leaderboard & statistics pages
+5. **User Profile Page with Points Redemption** (NEXT PRIORITY) - ACTIVELY WORKING ON THIS:
+   - User information display (avatar, username, email, member since)
+   - Points balance
+   - Points redemption marketplace / partner offers section
+   - Redemption history
+   - Account settings
+6. Automated verification via dispatcher API (don't do this for now)
 
 ---
 
@@ -433,20 +452,234 @@ interface UserStats {
 - Compact view on mobile
 - Pull-to-refresh
 
-#### 4.4 Enhanced Profile Page
-**Add to existing profile:**
-- Detailed stats section
-- Activity timeline (recent reports, votes)
-- Achievements/badges showcase
-- Points history graph (Chart.js or Recharts)
-
-#### 4.5 Quality Gates
+#### 4.4 Quality Gates
 - [ ] Leaderboard displays correct rankings
 - [ ] User stats calculate accurately
 - [ ] Time period filters work
 - [ ] Current user's rank is highlighted
 - [ ] Stats update in real-time after activity
 - [ ] Performance: Leaderboard query < 100ms
+
+---
+
+### Phase 4.5: User Profile & Points Redemption (Priority: HIGH) 🆕
+**Estimated Time:** 3-4 hours  
+**Dependencies:** Phase 1 (Points system)  
+**Hackathon Ready:** ✅ Essential for demo
+
+#### 4.5.1 Profile Page Components
+**Location:** `/app/(dashboard)/profile/page.tsx`
+
+**User Information Section:**
+- Avatar display (DiceBear API integration - already implemented)
+- Username, email, member since date
+- Edit profile button (future: settings modal)
+- Account statistics overview
+
+**Points Dashboard:**
+- Large points balance display
+- Current level with progress bar
+- Points to next level indicator
+- Level title/badge (e.g., "Transit Guardian")
+- Mini stats grid:
+  - Total reports submitted
+  - Total upvotes received
+  - Verification rate
+  - Reports this week/month
+
+**Activity Timeline:**
+- Recent reports (last 5-10)
+  - Status indicators (pending/verified/resolved)
+  - Points earned per report
+  - Quick link to report on map
+- Recent votes cast
+- Points history (last 10 transactions)
+  - Earned points (green)
+  - Redeemed points (red)
+  - Transaction date and description
+
+#### 4.5.2 Points Redemption System
+**Partner Offers Catalog:**
+- Grid/list view of available offers
+- Filter by category (transit discounts, food, entertainment, etc.)
+- Sort by points required
+- Search functionality
+
+**Offer Card Design:**
+- Partner logo/image
+- Offer title and description
+- Points cost (prominent)
+- Terms & conditions (expandable)
+- "Redeem" button (disabled if insufficient points)
+- Stock indicator (e.g., "50 available" or "Limited")
+
+**Redemption Flow:**
+1. User clicks "Redeem" on offer
+2. Confirmation modal appears:
+   - Offer details recap
+   - Points cost
+   - Current balance → New balance
+   - Terms acceptance checkbox
+   - "Confirm Redemption" button
+3. On confirm:
+   - Deduct points from user balance
+   - Generate redemption code/voucher
+   - Display redemption code modal:
+     - Unique code (e.g., "TG360-ABC123")
+     - QR code (for scanning at partner location)
+     - Expiry date
+     - Usage instructions
+     - "Copy Code" button
+     - "Save to Wallet" button (future)
+4. Redemption recorded in history
+
+**Redemption History:**
+- Table/list of past redemptions
+- Columns: Date, Offer, Points, Code, Status (Active/Used/Expired)
+- Filter by status
+- "View Code" button for active redemptions
+
+#### 4.5.3 Mock Partner Offers (Phase 1 - Demo Data)
+**Transit Discounts:**
+1. **10% off Monthly Pass** - 500 points
+2. **Free Single Ride Ticket** - 150 points
+3. **Weekend Pass Discount** - 300 points
+
+**Food & Beverage:**
+1. **Free Coffee at Cafe Młynek** - 200 points
+2. **20% off at Pizza Garden** - 250 points
+3. **Buy 1 Get 1 Pierogi** - 300 points
+
+**Entertainment:**
+1. **2-for-1 Movie Tickets** - 400 points
+2. **Museum Entry Discount** - 350 points
+
+#### 4.5.4 Backend Integration
+**New API Endpoints:**
+
+```typescript
+// Get partner offers
+GET /api/offers
+Response: { success: true, data: Offer[] }
+
+// Redeem an offer
+POST /api/offers/:offerId/redeem
+Request: { userId: string }
+Response: { 
+  success: true, 
+  redemption: {
+    id: string,
+    code: string,
+    expiresAt: Date,
+    offer: Offer
+  }
+}
+
+// Get user's redemption history
+GET /api/users/:userId/redemptions
+Response: { success: true, data: Redemption[] }
+```
+
+**TypeScript Types:**
+```typescript
+interface Offer {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  partnerLogo: string;
+  title: string;
+  description: string;
+  category: 'transit' | 'food' | 'entertainment' | 'shopping';
+  pointsCost: number;
+  termsAndConditions: string;
+  stockAvailable: number | null; // null = unlimited
+  expiryDays: number; // days until redeemed code expires
+  isActive: boolean;
+}
+
+interface Redemption {
+  id: string;
+  userId: string;
+  offerId: string;
+  offer: Offer;
+  code: string; // unique redemption code
+  redeemedAt: Date;
+  expiresAt: Date;
+  usedAt?: Date;
+  status: 'active' | 'used' | 'expired';
+  pointsSpent: number;
+}
+```
+
+**Database Tables:**
+```sql
+-- Partner Offers
+CREATE TABLE offers (
+  id VARCHAR PRIMARY KEY,
+  partner_id VARCHAR NOT NULL,
+  partner_name VARCHAR NOT NULL,
+  partner_logo VARCHAR,
+  title VARCHAR NOT NULL,
+  description TEXT NOT NULL,
+  category VARCHAR NOT NULL,
+  points_cost INT NOT NULL,
+  terms_and_conditions TEXT,
+  stock_available INT,
+  expiry_days INT NOT NULL DEFAULT 30,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User Redemptions
+CREATE TABLE redemptions (
+  id VARCHAR PRIMARY KEY,
+  user_id VARCHAR NOT NULL REFERENCES users(id),
+  offer_id VARCHAR NOT NULL REFERENCES offers(id),
+  code VARCHAR UNIQUE NOT NULL,
+  redeemed_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  status VARCHAR DEFAULT 'active',
+  points_spent INT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (offer_id) REFERENCES offers(id)
+);
+
+CREATE INDEX idx_redemptions_user ON redemptions(user_id);
+CREATE INDEX idx_redemptions_status ON redemptions(status);
+```
+
+#### 4.5.5 Mobile-First Design
+**Profile Page Layout:**
+- Single column on mobile
+- Sticky header with avatar and username
+- Collapsible sections (Points, Activity, Redemptions)
+- Pull-to-refresh for latest data
+- Smooth scroll animations
+
+**Offers Catalog:**
+- Card grid (1 column mobile, 2-3 columns tablet/desktop)
+- Infinite scroll or pagination
+- Filter/sort drawer (slides up from bottom on mobile)
+- Touch-optimized tap targets
+
+**Redemption Modal:**
+- Full-screen on mobile for better focus
+- Large QR code (easy to scan)
+- Prominent "Copy Code" button
+- Screenshot-friendly layout
+
+#### 4.5.6 Quality Gates
+- [ ] Profile page displays correct user info
+- [ ] Points balance updates in real-time after activity
+- [ ] Offers catalog loads and displays correctly
+- [ ] Redemption flow completes successfully
+- [ ] Points are deducted correctly on redemption
+- [ ] Redemption code is unique and displayed
+- [ ] Redemption history shows all transactions
+- [ ] Insufficient points prevents redemption
+- [ ] Mobile layout works on small screens (320px+)
+- [ ] Performance: Profile loads < 1s, Offers load < 500ms
 
 ---
 

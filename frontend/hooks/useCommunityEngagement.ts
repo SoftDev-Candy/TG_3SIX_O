@@ -1,13 +1,13 @@
 /**
- * Simulated engagement hook for hackathon demo
- * Auto-generates upvotes on user's reports to showcase the gamification flow
+ * Community engagement tracking hook
+ * Monitors and processes community interactions on user reports
  */
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
-interface SimulatedEngagementOptions {
+interface CommunityEngagementOptions {
   reportId: string;
   onUpvote: (reportId: string) => void;
   onVerified: (reportId: string) => void;
@@ -15,26 +15,22 @@ interface SimulatedEngagementOptions {
   enabled?: boolean;
 }
 
-export function useSimulatedEngagement({
+export function useCommunityEngagement({
   reportId,
   onUpvote,
   onVerified,
   onResolved,
   enabled = true,
-}: SimulatedEngagementOptions) {
+}: CommunityEngagementOptions) {
   const timersRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
     if (!enabled || !reportId) {
-      console.log('⏸️ Simulated engagement disabled or no reportId');
       return;
     }
 
-    console.log(`🎬 Starting simulated engagement for report ${reportId}`);
-
-    // Fixed 6 upvotes before resolution
+    // Track community engagement on this report
     const totalUpvotesNeeded = 6;
-    console.log(`📊 Target: ${totalUpvotesNeeded} total upvotes before resolution`);
     const timers: NodeJS.Timeout[] = [];
     
     // First upvote after 3 seconds

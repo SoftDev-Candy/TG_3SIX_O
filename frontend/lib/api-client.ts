@@ -10,9 +10,13 @@ import type {
   Reward,
   Vote,
   VoteStats,
+  Offer,
+  Redemption,
+  OfferCategory,
 } from '@/types';
 import { getMockReports, addMockReport } from './mock-data';
 import { recordVote, hasUserVoted } from './vote-tracker';
+import { mockOffers, getMockRedemptions, addMockRedemption, seedMockRedemptions } from './mock-offers';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const MOCK_DATA_ENABLED = process.env.NEXT_PUBLIC_MOCK_AUTH_ENABLED === 'true';
@@ -319,6 +323,101 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ rewardId }),
     });
+  }
+
+  // Offers & Redemptions endpoints
+  async getOffers(category?: OfferCategory) {
+    const result = await this.request<Offer[]>(
+      category ? `/api/offers?category=${category}` : '/api/offers'
+    );
+
+    // Fallback to mock data if backend unavailable
+    if (!result.success && MOCK_DATA_ENABLED) {
+      console.log('🎁 Using mock offers (backend unavailable)');
+      const filteredOffers = category 
+        ? mockOffers.filter(o => o.category === category)
+        : mockOffers;
+      return {
+        success: true,
+        data: filteredOffers,
+      };
+    }
+
+    return result;
+  }
+
+  async getOffer(offerId: string) {
+    const result = await this.request<Offer>(`/api/offers/${offerId}`);
+
+    // Fallback to mock data
+    if (!result.success && MOCK_DATA_ENABLED) {
+      const offer = mockOffers.find(o => o.id === offerId);
+      if (offer) {
+        return { success: true, data: offer };
+      }
+    }
+
+    return result;
+  }
+
+  async redeemOffer(offerId: string, userId: string) {
+    const result = await this.request<Redemption>(`/api/offers/${offerId}/redeem`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+
+    // Fallback to mock redemption
+    if (!result.success && MOCK_DATA_ENABLED) {
+      console.log('🎁 Mock redemption (backend unavailable)');
+      const offer = mockOffers.find(o => o.id === offerId);
+      if (offer) {
+        const redemption = addMockRedemption(userId, offer);
+        return { success: true, data: redemption };
+      }
+      return { success: false, error: 'Offer not found' };
+    }
+
+    return result;
+  }
+
+  async getUserRedemptions(userId?: string) {
+    const endpoint = userId ? `/api/users/${userId}/redemptions` : '/api/users/me/redemptions';
+    const result = await this.request<Redemption[]>(endpoint);
+
+    // Fallback to mock data
+    if (!result.success && MOCK_DATA_ENABLED) {
+      console.log('🎁 Using mock redemptions (backend unavailable)');
+      // Ensure we have a userId
+      const mockUserId = userId || 'mock-user-1';
+      
+      // Seed demo redemptions if none exist
+      const existingRedemptions = getMockRedemptions(mockUserId);
+      if (existingRedemptions.length === 0) {
+        seedMockRedemptions(mockUserId);
+      }
+      
+      return {
+        success: true,
+        data: getMockRedemptions(mockUserId),
+      };
+    }
+
+    return result;
+  }
+
+  async getRedemption(redemptionId: string) {
+    const result = await this.request<Redemption>(`/api/redemptions/${redemptionId}`);
+
+    // Fallback to mock data
+    if (!result.success && MOCK_DATA_ENABLED) {
+      const allRedemptions = getMockRedemptions('mock-user-1'); // would need userId
+      const redemption = allRedemptions.find(r => r.id === redemptionId);
+      if (redemption) {
+        return { success: true, data: redemption };
+      }
+    }
+
+    return result;
   }
 }
 

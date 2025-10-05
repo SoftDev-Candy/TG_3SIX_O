@@ -18,6 +18,7 @@ interface AuthContextType {
   register: (email: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUserPoints: (pointsToAdd: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -284,6 +285,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateUserPoints = (pointsToAdd: number) => {
+    if (!user) return;
+    
+    const updatedUser = {
+      ...user,
+      points: user.points + pointsToAdd,
+    };
+    
+    setUser(updatedUser);
+    
+    // Update localStorage if using mock auth
+    if (MOCK_AUTH_ENABLED && typeof window !== 'undefined') {
+      localStorage.setItem(MOCK_USER_KEY, JSON.stringify(updatedUser));
+    }
+    
+    console.log(`💰 Points updated: ${user.points} → ${updatedUser.points} (+${pointsToAdd})`);
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -293,6 +312,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     refreshUser,
+    updateUserPoints,
   };
 
   return (

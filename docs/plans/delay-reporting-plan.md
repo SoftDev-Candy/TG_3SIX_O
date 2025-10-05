@@ -593,24 +593,52 @@ Response:
 
 ## 🚀 **Implementation Phases**
 
-### **Phase 1: Core MVP** (Current Sprint)
+### **Phase 1: Core MVP** ✅ COMPLETE
 **Goal**: Basic functional report submission
 - [x] ReportDelayForm component (already exists)
-- [ ] Update with new field requirements
-- [ ] Location detection implementation:
+- [x] Update with new field requirements
+- [x] Location detection implementation:
   - [x] GPS auto-detection with fallback (Tauron Arena)
-  - [ ] Manual location search input
-  - [ ] Autosuggest dropdown with mock Kraków locations
-  - [ ] Location suggestion selection
-  - [ ] Display selected location
-- [ ] Line number input (free text, no autocomplete yet)
-- [ ] Duration picker
-- [ ] API integration for submission
-- [ ] Form state persistence (localStorage)
-- [ ] Loading & success states
-- [ ] Error handling & validation
+  - [x] Manual location search input
+  - [x] Autosuggest dropdown with mock Kraków locations
+  - [x] Location suggestion selection
+  - [x] Display selected location
+- [x] Line number input (free text, no autocomplete yet)
+- [x] Vehicle number input (optional)
+- [x] Severity selection (minor/moderate/severe)
+- [x] Category selection (mechanical, signal, weather, crowding, etc.)
+- [x] Description field with validation
+- [x] Photo upload (max 3 images, 5MB each)
+- [x] Form validation with Zod schema
+- [x] Loading & success states
+- [x] Error handling & validation
+- [x] Quick Fill feature for demo/testing
 
-**Deliverable**: Users can submit basic delay reports with all required fields
+**Deliverable**: ✅ Users can submit comprehensive delay reports with all required fields
+
+### **Phase 1.5: Map Integration & Visualization** ✅ COMPLETE
+**Goal**: Display reports on interactive map with real-time updates
+- [x] Leaflet map integration with Kraków base map
+- [x] Dynamic incident markers from user reports
+- [x] Enhanced map tooltips with:
+  - [x] Vehicle number display
+  - [x] Reporter username
+  - [x] Upvote count
+  - [x] Time reported
+  - [x] Severity indicators with color coding
+- [x] User's own reports distinguished with blue border
+- [x] Pulsing animation for active incidents
+- [x] Marker size hierarchy based on severity
+- [x] Report cards with compact view for mobile
+- [x] 2-row footer layout:
+  - [x] Row 1: Location + Time
+  - [x] Row 2: Vote buttons + Status/Points
+- [x] Vote buttons redesigned with emoji icons (👍 👎)
+- [x] Mobile-optimized card padding and spacing
+- [x] Quick Fill prioritization (Tram 52 first click)
+- [x] Hidden pre-populated markers (appear on user report)
+
+**Deliverable**: ✅ Interactive map showing real-time delay reports with voting
 
 ### **Phase 2: Enhanced Features** (Next Sprint)
 **Goal**: Improve UX and add media upload

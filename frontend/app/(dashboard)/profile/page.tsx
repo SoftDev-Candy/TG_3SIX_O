@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { RequireAuth } from '@/components/auth/ProtectedRoute';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { CompactRedemptionHistory } from '@/components/rewards/RedemptionHistory';
+import { apiClient } from '@/lib/api-client';
+import { Redemption } from '@/types';
 import { 
   User, 
   Trophy, 
@@ -18,15 +20,40 @@ import {
   FileText,
   TrendingUp,
   Award,
-  Settings
+  Settings,
+  Gift,
+  Sparkles
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [loadingRedemptions, setLoadingRedemptions] = useState(false);
 
-  if (!user) return null;
+  useEffect(() => {
+    if (user) {
+      loadRedemptions();
+    }
+  }, [user]);
+
+  const loadRedemptions = async () => {
+    if (!user) return;
+    
+    setLoadingRedemptions(true);
+    try {
+      const result = await apiClient.getUserRedemptions(user.id);
+      if (result.success && result.data) {
+        setRedemptions(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to load redemptions:', error);
+    } finally {
+      setLoadingRedemptions(false);
+    }
+  };
 
   // Calculate user level and progress
   const getUserLevelInfo = (points: number) => {
@@ -54,6 +81,33 @@ export default function ProfilePage() {
     };
   };
 
+  // Show login prompt if not authenticated (like map page does)
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="text-6xl mb-4">👤</div>
+            <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
+            <p className="text-gray-600">Sign in to view your profile and track your contributions</p>
+            <div className="flex gap-3 justify-center mt-6">
+              <Link href="/login">
+                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button variant="outline">
+                  Create Account
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const levelInfo = getUserLevelInfo(user.points);
 
   // Mock data for demonstration - would come from API
@@ -65,6 +119,10 @@ export default function ProfilePage() {
     joinDate: user.createdAt,
     lastActive: new Date().toISOString(),
   };
+
+  // Redemption stats
+  const activeRedemptions = redemptions.filter(r => r.status === 'active').length;
+  const totalPointsSpent = redemptions.reduce((sum, r) => sum + r.pointsSpent, 0);
 
   const recentActivity = [
     { type: 'report', description: 'Reported delay on Bus Line 42', points: 3, date: '2 hours ago' },
@@ -80,8 +138,7 @@ export default function ProfilePage() {
   ];
 
   return (
-    <RequireAuth>
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div>
@@ -129,10 +186,11 @@ export default function ProfilePage() {
           {/* Right Column - Tabs */}
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
                 <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                <TabsTrigger value="rewards">Rewards</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -274,10 +332,108 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Rewards Tab */}
+              <TabsContent value="rewards" className="space-y-4">
+                {/* Rewards Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Star className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+                      <div className="text-2xl font-bold">{user.points}</div>
+                      <div className="text-xs text-gray-500">Available Points</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Gift className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                      <div className="text-2xl font-bold">{activeRedemptions}</div>
+                      <div className="text-xs text-gray-500">Active Coupons</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Sparkles className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                      <div className="text-2xl font-bold">{totalPointsSpent}</div>
+                      <div className="text-xs text-gray-500">Points Redeemed</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Active Coupons */}
+                {loadingRedemptions ? (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <CompactRedemptionHistory redemptions={redemptions} />
+                )}
+
+                {/* Browse More Offers CTA */}
+                <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                        <Gift className="h-8 w-8 text-blue-600" />
+                      </div>
+                      <div className="flex-1 text-center sm:text-left">
+                        <h3 className="font-semibold text-lg mb-1">Discover More Rewards</h3>
+                        <p className="text-sm text-gray-600">
+                          Browse exclusive offers from our partners and redeem your points
+                        </p>
+                      </div>
+                      <Link href="/rewards">
+                        <Button className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap">
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          View Marketplace
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Points History Preview */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Recent Points Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {redemptions.slice(0, 3).map((redemption) => (
+                        <div key={redemption.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Gift className="h-5 w-5 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-medium">Redeemed {redemption.offer.title}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatDistanceToNow(new Date(redemption.redeemedAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="bg-red-100 text-red-800">
+                            -{redemption.pointsSpent} pts
+                          </Badge>
+                        </div>
+                      ))}
+                      {redemptions.length === 0 && (
+                        <div className="text-center py-8">
+                          <Gift className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No redemptions yet</p>
+                          <p className="text-xs text-gray-400">Start earning and redeeming points!</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
       </div>
-    </RequireAuth>
   );
 }
