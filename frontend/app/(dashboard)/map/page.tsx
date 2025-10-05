@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSimulatedEngagement } from '@/hooks/useSimulatedEngagement';
+import { useCommunityActivity } from '@/hooks/useCommunityActivity';
 import { usePointsNotifications } from '@/hooks/usePointsNotifications';
 import { apiClient } from '@/lib/api-client';
 import type { DelayReport, CreateReportInput } from '@/types';
@@ -69,33 +70,45 @@ export default function MapPage() {
     fetchReports();
   }, []);
 
+  // Stable callbacks for simulated engagement
+  const handleUpvote = useCallback((reportId: string) => {
+    // Update local state immediately (simulated community upvote)
+    setReports(prev => prev.map(r =>
+      r.id === reportId ? { ...r, upvotes: r.upvotes + 1 } : r
+    ));
+    console.log(`📈 Upvote count updated for report ${reportId}`);
+  }, []);
+
+  const handleVerified = useCallback((reportId: string) => {
+    // Update status to verified
+    setReports(prev => prev.map(r =>
+      r.id === reportId ? { ...r, status: 'verified' } : r
+    ));
+  }, []);
+
+  const handleResolved = useCallback((reportId: string) => {
+    // Update status to resolved
+    setReports(prev => prev.map(r =>
+      r.id === reportId ? { ...r, status: 'resolved' } : r
+    ));
+  }, []);
+
   // Simulated engagement for user's submitted reports
   useSimulatedEngagement({
     reportId: lastSubmittedReportId || '',
     enabled: !!lastSubmittedReportId,
-    onUpvote: (reportId) => {
-      // Update local state immediately (simulated community upvote)
-      setReports(prev => prev.map(r =>
-        r.id === reportId ? { ...r, upvotes: r.upvotes + 1 } : r
-      ));
-      console.log(`📈 Upvote count updated for report ${reportId}`);
-    },
-    onVerified: (reportId) => {
-      // Update status to verified
-      setReports(prev => prev.map(r =>
-        r.id === reportId ? { ...r, status: 'verified' } : r
-      ));
-      
-      // Schedule auto-resolution after 30 seconds
-      setTimeout(() => {
-        setReports(prev => prev.map(r =>
-          r.id === reportId ? { ...r, status: 'resolved' } : r
-        ));
-        
-        const commutersHelped = Math.floor(Math.random() * 70) + 30;
-        showResolutionToast(commutersHelped);
-      }, 30000);
-    },
+    onUpvote: handleUpvote,
+    onVerified: handleVerified,
+    onResolved: handleResolved,
+  });
+
+  // Simulate community activity on other reports
+  useCommunityActivity({
+    reports,
+    currentUserId: user?.id,
+    onUpvote: handleUpvote,
+    onVerified: handleVerified,
+    enabled: true,
   });
 
   const handleReportSubmit = async (data: CreateReportInput) => {

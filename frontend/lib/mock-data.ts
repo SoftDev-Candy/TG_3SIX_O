@@ -159,6 +159,32 @@ export const mockReports: DelayReport[] = [
     downvotes: 0,
     reportedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 min ago
   },
+  {
+    id: 'report-6',
+    userId: 'user-3',
+    user: {
+      username: 'zofia_daily',
+      avatar: undefined,
+    },
+    location: {
+      lat: 50.0485,
+      lng: 19.9575,
+      address: 'Kazimierz District',
+      stopName: 'Plac Wolnica',
+    },
+    transportType: 'bus',
+    line: '184',
+    vehicleNumber: 'EY4821',
+    severity: 'minor',
+    category: 'other',
+    description: 'Bus had to wait for ambulance to pass. Brief 5-minute delay, now resolved.',
+    photos: [],
+    status: 'resolved',
+    upvotes: 7,
+    downvotes: 0,
+    reportedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
+    verifiedBy: ['user-1', 'user-2'],
+  },
 ];
 
 // Track user-submitted reports in memory

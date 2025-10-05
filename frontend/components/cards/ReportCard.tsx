@@ -63,6 +63,11 @@ export default function ReportCard({
   
   // Show vote count for verified reports too
   const showVoteCount = (report.status === 'verified' || report.status === 'resolved') && report.upvotes > 0;
+  
+  // Calculate total points for resolved reports (if it's the user's own report)
+  const totalPointsEarned = isOwnReport && report.status === 'resolved'
+    ? 1 + report.upvotes + 2 // base + upvotes + verification bonus
+    : null;
 
   const handleImageError = (imageUrl: string) => {
     setImageError(prev => new Set([...prev, imageUrl]));
@@ -109,7 +114,9 @@ export default function ReportCard({
                 <div className="flex items-center gap-1 text-xs">
                   <statusDisplay.icon className={cn('h-3 w-3', statusDisplay.color)} />
                   <span className={statusDisplay.color}>{statusDisplay.label}</span>
-                  {(isVerifying || showVoteCount) && (
+                  {totalPointsEarned ? (
+                    <span className="font-semibold text-green-700">{totalPointsEarned} pts</span>
+                  ) : (isVerifying || showVoteCount) && (
                     <span className="font-semibold text-green-700">+{report.upvotes}</span>
                   )}
                 </div>
@@ -209,7 +216,9 @@ export default function ReportCard({
                     <div className="flex items-center gap-1">
                       <statusDisplay.icon className={cn('h-4 w-4', statusDisplay.color)} />
                       <span className={statusDisplay.color}>{statusDisplay.label}</span>
-                      {(isVerifying || showVoteCount) && (
+                      {totalPointsEarned ? (
+                        <span className="font-semibold text-green-700">{totalPointsEarned} pts earned</span>
+                      ) : (isVerifying || showVoteCount) && (
                         <span className="font-semibold text-green-700">+{report.upvotes}</span>
                       )}
                     </div>
