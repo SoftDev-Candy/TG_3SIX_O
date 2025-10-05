@@ -2,6 +2,12 @@
 
 Fastify-based backend API for the TG-3SIX-O (Travel Guardian 360) transit delay reporting platform.
 
+## 🎥 Watch the Backend in Action
+
+🐍 **[Live Demo - Python Backend System](https://www.youtube.com/watch?v=KIcf96p7hjo)**
+
+See API endpoints, points calculation engine, and data processing in action.
+
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies

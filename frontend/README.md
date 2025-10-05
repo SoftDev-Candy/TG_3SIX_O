@@ -2,6 +2,12 @@
 
 Modern Next.js frontend for the TG-3SIX-O public transport delay reporting system.
 
+## 🎥 Watch the Mobile Experience
+
+📱 **[Live Demo - User-Reported Disruptions](https://youtu.be/ThRl0xW28rs)**
+
+See the complete mobile-first workflow: report submission → community voting → verification → rewards redemption
+
 ## Tech Stack
 
 - **Next.js 15** - React framework with App Router

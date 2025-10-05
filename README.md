@@ -1,13 +1,28 @@
-🚦 Guardian: Real-Time Traffic Intelligence System
-Guardian is a high-performance C++17 traffic simulation system that provides real-time routing intelligence with dynamic incident handling and live frontend visualization.
-✨ Features
+🚦 Travel Guardian 360: Real-Time Transit Intelligence System
 
-🗺️ Graph-Based Routing: Advanced shortest path calculation using Dijkstra's algorithm
-⚠️ Dynamic Incident Processing: Real-time road incidents (minor, moderate, severe) with automatic travel time adjustments and configurable severity multipliers
-📡 Live Updates: Backend streams adjusted ETAs and routes continuously via Server-Sent Events (SSE)
-🔄 Concurrency & Thread Safety: Robust multi-threading with mutexes, atomics, and condition variables for safe live state management
-🏗️ Modern C++ Architecture: Clean header/implementation separation following modern C++17 best practices
-🌐 Frontend Integration: React dashboard with real-time SSE stream visualization showing baseline vs. adjusted routes
+**Codename:** TG-3SIX-O | **Public Brand:** Travel Guardian 360  
+**Tagline:** *Turning Commuters into Guardians, One Report at a Time*
+
+A community-driven platform where transit users report delays instantly, earn points for verified contributions, redeem rewards from local partners, and collectively route around disruptions in real-time.
+
+## 🎥 Live Demos
+
+Watch the platform in action:
+
+- 📱 **[Mobile Experience](https://youtu.be/ThRl0xW28rs)** - User-reported disruptions workflow
+- 🐍 **[Python Backend](https://www.youtube.com/watch?v=KIcf96p7hjo)** - API endpoints and data processing
+- 🗺️ **[Real-time Tracking](https://youtu.be/n9ISpOYGZ4o)** - GTFS Kraków integration with 21 routes
+- ⚡ **C++ Routing Engine** - Demo coming soon
+
+## ✨ Features
+
+🗺️ **Graph-Based Routing:** Advanced shortest path calculation using Dijkstra's algorithm  
+⚠️ **Community Reporting:** Users report delays, earn points, verify through voting  
+📡 **Live Updates:** Backend streams adjusted ETAs and routes via Server-Sent Events (SSE)  
+🎮 **Gamification:** Points system, levels, rewards marketplace with QR codes  
+🔄 **Concurrency & Thread Safety:** Robust multi-threading with modern C++17  
+🌐 **Mobile-First Frontend:** Next.js 15 + React with 50+ components, 12 pages  
+🏆 **Rewards System:** Redeem points for transit passes, food, entertainment
 
 🛠️ Tech Stack
 ComponentTechnologyBackendC++17, Custom HTTP Server, nlohmann::jsonFrontendReact, Server-Sent Events (SSE)AlgorithmsDijkstra's shortest path, dynamic graph adjustmentsConcurrencystd::thread, std::mutex, std::condition_variable, std::atomic

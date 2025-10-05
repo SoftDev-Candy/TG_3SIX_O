@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Guardian 360 - A Hackathon Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .stat-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+        @keyframes slideUp { 0% { transform: translateY(50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 1s ease-in; }
+        .animate-slide-up { animation: slideUp 0.8s ease-out; }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-white"></i>
+                </div>
+                <span class="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Travel Guardian 360</span>
+            </div>
+            <div class="hidden md:flex space-x-8 text-sm">
+                <a href="#hero" class="text-gray-700 hover:text-blue-500">Home</a>
+                <a href="#stats" class="text-gray-700 hover:text-blue-500">Stats</a>
+                <a href="#features" class="text-gray-700 hover:text-blue-500">Features</a>
+                <a href="#demos" class="text-gray-700 hover:text-blue-500">Demos</a>
+                <a href="#team" class="text-gray-700 hover:text-blue-500">Team</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section id="hero" class="min-h-screen flex items-center justify-center gradient-bg pt-16">
+        <div class="text-center px-4 max-w-5xl">
+            <div class="inline-block mb-4 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-semibold">
+                🏆 Hackathon 2025 • 19 Days • 4 First-Timers
+            </div>
+            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 animate-slide-up">Travel Guardian 360</h1>
+            <p class="text-xl md:text-2xl text-white/90 mb-4">Turning Commuters into Guardians, One Report at a Time</p>
+            <p class="text-lg text-white/80 mb-8 max-w-3xl mx-auto">
+                5 strangers. 71 commits. 3 tech stacks. One production-ready platform that crowdsources transit delays, rewards contributors, and reroutes everyone in real-time.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <div class="text-4xl font-bold text-white">71</div>
+                    <div class="text-sm text-white/80">Commits</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <div class="text-4xl font-bold text-white">19</div>
+                    <div class="text-sm text-white/80">Days</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <div class="text-4xl font-bold text-white">3</div>
+                    <div class="text-sm text-white/80">Stacks</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <div class="text-4xl font-bold text-white">5</div>
+                    <div class="text-sm text-white/80">Strangers</div>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#features" class="px-8 py-4 bg-white text-blue-500 font-semibold rounded-lg hover:bg-gray-100 transition shadow-lg">Explore Features</a>
+                <a href="frontend/README.md" class="px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/30 transition border border-white/30">View Docs</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats & Timeline -->
+    <section id="stats" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">The Journey</h2>
+            <div class="grid md:grid-cols-3 gap-8 mb-16">
+                <div class="bg-blue-50 rounded-xl p-6">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-2">Week 1: Foundation</h3>
+                    <p class="text-gray-600 mb-3 italic">Sept 17-24</p>
+                    <ul class="space-y-2 text-sm">
+                        <li>✓ C++ routing engine (Dijkstra)</li>
+                        <li>✓ TransitDNA route tracking</li>
+                        <li>✓ First HTML frontend</li>
+                    </ul>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-6">
+                    <h3 class="text-2xl font-bold text-purple-600 mb-2">Week 2: The Pivot</h3>
+                    <p class="text-gray-600 mb-3 italic">Sept 25 - Oct 3</p>
+                    <ul class="space-y-2 text-sm">
+                        <li>✓ Shift to community reporting</li>
+                        <li>✓ React/Next.js rebuild</li>
+                        <li>✓ Fastify API + 21 Kraków routes</li>
+                    </ul>
+                </div>
+                <div class="bg-red-50 rounded-xl p-6">
+                    <h3 class="text-2xl font-bold text-red-600 mb-2">Week 3: The Sprint</h3>
+                    <p class="text-gray-600 mb-3 italic">Oct 4-5 (48hrs)</p>
+                    <ul class="space-y-2 text-sm">
+                        <li>✓ 55 commits in 48 hours</li>
+                        <li>✓ Auth, voting, points, rewards</li>
+                        <li>✓ Mock fallbacks, polish</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16">What We Built</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-map-marked-alt text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Instant Reporting</h3>
+                    <p class="text-gray-600">GPS detection, photo upload, 30-second delay reports from your phone.</p>
+                </div>
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-users text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Community Verification</h3>
+                    <p class="text-gray-600">Upvote real delays. Auto-verify at 3 votes. Collective intelligence wins.</p>
+                </div>
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Points & Rewards</h3>
+                    <p class="text-gray-600">8+ points per verified report. Redeem for transit passes, coffee, entertainment.</p>
+                </div>
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-route text-red-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Dynamic Routing</h3>
+                    <p class="text-gray-600">C++ engine calculates alternate paths in &lt;10ms around verified delays.</p>
+                </div>
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-mobile-alt text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Mobile-First</h3>
+                    <p class="text-gray-600">44-64px touch targets. Bottom nav. One-handed. Works on 3G.</p>
+                </div>
+                <div class="stat-card bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-shield-alt text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Demo-Proof</h3>
+                    <p class="text-gray-600">Professional mock fallbacks. Works without backend. Judges can't tell.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="py-20 bg-white">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-12">Three-Layer Architecture</h2>
+            <div class="space-y-6">
+                <div class="bg-blue-50 rounded-xl p-6 border-l-4 border-blue-500">
+                    <h3 class="text-xl font-bold mb-2">Frontend: Next.js 15 + React</h3>
+                    <p class="text-gray-600">12 pages, 50+ components, mobile-first responsive</p>
+                </div>
+                <div class="flex justify-center"><i class="fas fa-arrow-down text-gray-400 text-2xl"></i></div>
+                <div class="bg-green-50 rounded-xl p-6 border-l-4 border-green-500">
+                    <h3 class="text-xl font-bold mb-2">Middleware: Fastify + TypeScript</h3>
+                    <p class="text-gray-600">20+ endpoints, points engine, auto-verification</p>
+                </div>
+                <div class="flex justify-center"><i class="fas fa-arrow-down text-gray-400 text-2xl"></i></div>
+                <div class="bg-red-50 rounded-xl p-6 border-l-4 border-red-500">
+                    <h3 class="text-xl font-bold mb-2">Core: C++17 Routing Engine</h3>
+                    <p class="text-gray-600">&lt;10ms routes, Dijkstra, thread-safe, SSE streaming</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Videos -->
+    <section id="demos" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">See It In Action</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Watch our live demos showcasing the full platform from mobile experience to backend systems</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Video 1: Mobile Experience -->
+                <div class="stat-card bg-white rounded-2xl overflow-hidden shadow-lg">
+                    <div class="aspect-video bg-gray-900">
+                        <iframe 
+                            class="w-full h-full" 
+                            src="https://www.youtube.com/embed/ThRl0xW28rs" 
+                            title="User-Reported Disruptions - Mobile Experience"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-mobile-alt text-blue-600"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">Mobile Experience</h3>
+                        </div>
+                        <p class="text-gray-600 mb-2">User-reported disruptions demo</p>
+                        <p class="text-sm text-gray-500">Full mobile-first workflow from report submission to community verification</p>
+                    </div>
+                </div>
+
+                <!-- Video 2: Python Backend -->
+                <div class="stat-card bg-white rounded-2xl overflow-hidden shadow-lg">
+                    <div class="aspect-video bg-gray-900">
+                        <iframe 
+                            class="w-full h-full" 
+                            src="https://www.youtube.com/embed/KIcf96p7hjo" 
+                            title="Python Backend System"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fab fa-python text-green-600"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">Python Backend</h3>
+                        </div>
+                        <p class="text-gray-600 mb-2">Backend systems demonstration</p>
+                        <p class="text-sm text-gray-500">API endpoints, data processing, and system architecture</p>
+                    </div>
+                </div>
+
+                <!-- Video 3: Real-time Tracking -->
+                <div class="stat-card bg-white rounded-2xl overflow-hidden shadow-lg">
+                    <div class="aspect-video bg-gray-900">
+                        <iframe 
+                            class="w-full h-full" 
+                            src="https://www.youtube.com/embed/n9ISpOYGZ4o" 
+                            title="Real-time Tracking System - GTFS Kraków"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-map-marked-alt text-purple-600"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">Real-time Tracking</h3>
+                        </div>
+                        <p class="text-gray-600 mb-2">GTFS Kraków integration demo</p>
+                        <p class="text-sm text-gray-500">Live vehicle positions and 21 transit routes in action</p>
+                    </div>
+                </div>
+
+                <!-- Video 4: C++ Engine (placeholder) -->
+                <div class="stat-card bg-white rounded-2xl overflow-hidden shadow-lg">
+                    <div class="aspect-video bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+                        <div class="text-center text-white p-8">
+                            <i class="fas fa-bolt text-6xl mb-4 opacity-80"></i>
+                            <h3 class="text-2xl font-bold mb-2">C++ Routing Engine</h3>
+                            <p class="text-red-100">Demo coming soon</p>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-code text-red-600"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">C++ Performance Layer</h3>
+                        </div>
+                        <p class="text-gray-600 mb-2">Travel Guardian 360 core engine</p>
+                        <p class="text-sm text-gray-500">Dijkstra's algorithm, sub-millisecond routing, thread-safe execution</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-12">
+                <a href="https://www.youtube.com/@travelguardian360" class="inline-flex items-center px-8 py-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg">
+                    <i class="fab fa-youtube text-2xl mr-3"></i>
+                    Watch More on YouTube
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team -->
+    <section id="team" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-16">The Team</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div class="bg-white rounded-xl p-6 text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">13</div>
+                    <h3 class="font-bold text-lg mb-1">13inh</h3>
+                    <p class="text-sm text-gray-600 mb-2">Mobile-First Architect</p>
+                    <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">next-frontend</span>
+                </div>
+                <div class="bg-white rounded-xl p-6 text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">JW</div>
+                    <h3 class="font-bold text-lg mb-1">Jakub</h3>
+                    <p class="text-sm text-gray-600 mb-2">Integration Specialist</p>
+                    <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">UserDisruptionsAPI</span>
+                </div>
+                <div class="bg-white rounded-xl p-6 text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">MC</div>
+                    <h3 class="font-bold text-lg mb-1">Marvellous</h3>
+                    <p class="text-sm text-gray-600 mb-2">Data Engineer</p>
+                    <span class="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">krakow_live_data</span>
+                </div>
+                <div class="bg-white rounded-xl p-6 text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">TQ</div>
+                    <h3 class="font-bold text-lg mb-1">Thoufeeque</h3>
+                    <p class="text-sm text-gray-600 mb-2">DevOps Guardian</p>
+                    <span class="text-xs bg-yellow-100 text-yellow-600 px-2 py-1 rounded">Documentation</span>
+                </div>
+                <div class="bg-white rounded-xl p-6 text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">SC</div>
+                    <h3 class="font-bold text-lg mb-1">SoftDev-Candy</h3>
+                    <p class="text-sm text-gray-600 mb-2">Organization</p>
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Team Lead</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20 gradient-bg">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">Ready to Scale</h2>
+            <p class="text-xl text-white/90 mb-8">From hackathon project to production platform. Ready to pilot in Kraków and expand across Poland.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="docs/HACKATHON_NARRATIVE_PRD.md" class="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition">Read Full Story</a>
+                <a href="docs/EXECUTIVE_BRIEF.md" class="px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/30 transition border border-white/30">Executive Brief</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <div class="mb-4">
+                <h3 class="text-2xl font-bold mb-2">Travel Guardian 360</h3>
+                <p class="text-gray-400">Turning Commuters into Guardians, One Report at a Time</p>
+            </div>
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="https://github.com/SoftDev-Candy/TG_3SIX_O" class="text-gray-400 hover:text-white"><i class="fab fa-github text-2xl"></i></a>
+            </div>
+            <p class="text-gray-500 text-sm">Hackathon 2025 • 5 Strangers • 19 Days • Production-Ready</p>
+        </div>
+    </footer>
+</body>
+</html>
