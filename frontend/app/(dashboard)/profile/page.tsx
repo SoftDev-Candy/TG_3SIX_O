@@ -33,6 +33,9 @@ export default function ProfilePage() {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loadingRedemptions, setLoadingRedemptions] = useState(false);
 
+  // Debug log
+  console.log('Profile page - user:', user ? 'logged in' : 'not logged in');
+
   useEffect(() => {
     if (user) {
       loadRedemptions();

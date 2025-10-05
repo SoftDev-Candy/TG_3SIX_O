@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -9,7 +9,6 @@ import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCommunityEngagement } from '@/hooks/useCommunityEngagement';
-import { useCommunityActivity } from '@/hooks/useCommunityActivity';
 import { usePointsNotifications } from '@/hooks/usePointsNotifications';
 import { apiClient } from '@/lib/api-client';
 import type { DelayReport, CreateReportInput } from '@/types';
@@ -50,6 +49,7 @@ export default function MapPage() {
   const [reports, setReports] = useState<DelayReport[]>([]);
   const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const pointsAwardedRef = useRef(false); // Track if points already awarded
   
   const { user, isAuthenticated, updateUserPoints } = useAuth();
   const { showPointsToast, showVerificationToast, showResolutionToast } = usePointsNotifications();
@@ -87,27 +87,13 @@ export default function MapPage() {
   }, []);
 
   const handleResolved = useCallback((reportId: string) => {
-    // Use functional update to get current reports without dependency
-    setReports(prev => {
-      // Find the report to get upvote count
-      const report = prev.find(r => r.id === reportId);
-      if (!report) return prev;
-      
-      // Calculate total points: 1 base + upvotes + 2 first reporter bonus
-      const totalPoints = 1 + report.upvotes + 2;
-      
-      // Update user's points balance in real-time
-      updateUserPoints(totalPoints);
-      
-      showResolutionToast(totalPoints);
-      
-      // Update status to resolved
-      return prev.map(r =>
-        r.id === reportId ? { ...r, status: 'resolved' } : r
-      );
-    });
-  }, [updateUserPoints, showResolutionToast]);
+    // Update status to resolved
+    setReports(prev => prev.map(r =>
+      r.id === reportId ? { ...r, status: 'resolved' } : r
+    ));
+  }, []);
 
+  // Track community engagement on user's submitted report
   useCommunityEngagement({
     reportId: lastSubmittedReportId || '',
     enabled: !!lastSubmittedReportId,
@@ -116,18 +102,24 @@ export default function MapPage() {
     onResolved: handleResolved,
   });
 
-  // Simulate community activity on other reports
-  useCommunityActivity({
-    reports,
-    currentUserId: user?.id,
-    onUpvote: handleUpvote,
-    onVerified: handleVerified,
-    enabled: true,
-  });
+  // Update points when user's report is resolved
+  useEffect(() => {
+    if (!lastSubmittedReportId || !user || pointsAwardedRef.current) return;
+    
+    const resolvedReport = reports.find(
+      r => r.id === lastSubmittedReportId && r.status === 'resolved'
+    );
+    
+    if (resolvedReport) {
+      const totalPoints = 1 + resolvedReport.upvotes + 2;
+      updateUserPoints(totalPoints);
+      pointsAwardedRef.current = true; // Mark as awarded
+    }
+  }, [reports, lastSubmittedReportId, user, updateUserPoints]);
 
   const handleReportSubmit = async (data: CreateReportInput) => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to report delays');
+      toast.error('Please sign in to submit a report');
       return;
     }
     
@@ -139,14 +131,14 @@ export default function MapPage() {
       if (response.success && response.data) {
         // Add to top of list
         setReports(prev => [response.data!, ...prev]);
-        
         // Show success toast
         toast.success('+3 points! Report submitted 🎉', {
           duration: 4000,
         });
         
-        // Start simulated engagement
+        // Store the report ID to trigger simulated engagement
         setLastSubmittedReportId(response.data.id);
+        pointsAwardedRef.current = false; // Reset for new report
         
         // Close modal
         setShowReportModal(false);
