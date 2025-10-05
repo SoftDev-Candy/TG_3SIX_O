@@ -7,7 +7,7 @@ from fastapi import FastAPI, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import select, create_engine
 from models import Distruption, Base
-from schemas import Distruption_Submission, Distruption_view
+from schemas import Distruption_Submission, Distruption_view, Dispatcher_call
 from pathlib import Path
 
 app = FastAPI()
@@ -55,6 +55,10 @@ def submit_distruption(dist_data: str = Form(...),file: UploadFile = File(None) 
 
     return {"info": "success"}
 
+
+@app.post("/call-dispatcher/{id}")
+def dispatcher_call(id: int, dispatcher_call_data: Dispatcher_call):
+    return {"info": "success"}
 
 if __name__ == "__main__":
     Base.metadata.create_all(engine)

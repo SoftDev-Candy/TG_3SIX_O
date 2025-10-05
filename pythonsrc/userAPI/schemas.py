@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class Distruption_Submission(BaseModel):
@@ -19,3 +19,9 @@ class Distruption_view(BaseModel):
     severity: int
     file_name: Optional[str]
 
+class Dispatcher_call(BaseModel):
+    location: int
+    description: Optional[str]
+    title: Optional[str]
+    phone_number: str
+    emergency_service_need: Tuple[bool, bool, bool]
