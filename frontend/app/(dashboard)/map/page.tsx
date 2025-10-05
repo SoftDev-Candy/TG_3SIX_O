@@ -8,6 +8,7 @@ import { AnimatePresence } from 'framer-motion';
 import ReportDelayForm from '@/components/forms/ReportDelayForm';
 import LiveDelaysPanel from '@/components/delays/LiveDelaysPanel';
 import ProfilePanel from '@/components/profile/ProfilePanel';
+import ReportPanel from '@/components/reports/ReportPanel';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCommunityEngagement } from '@/hooks/useCommunityEngagement';
@@ -344,29 +345,35 @@ export default function MapPage() {
           {/* Report Button - Prominent */}
           <button 
             className={`flex flex-col items-center justify-center min-w-[80px] h-16 rounded-xl transition-all font-bold ${
-              activeTab === 'report'
-                ? 'bg-red-700 text-white scale-105'
-                : 'bg-red-600 text-white hover:bg-red-700 hover:scale-105'
-            } shadow-lg`}
+              activeTab === 'report' 
+                ? 'bg-red-600 text-white shadow-lg scale-105' 
+                : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105'
+            }`}
             onClick={() => {
               setActiveTab('report');
-              setShowReportModal(true);
+              setShowReportModal(!showReportModal);
+              setShowStats(false);
+              setShowProfile(false);
+              setShowMobileMenu(false);
             }}
           >
             <AlertCircle className="w-7 h-7 mb-1" />
-            <span className="text-xs font-bold">Report</span>
+            <span className="text-xs">Report</span>
           </button>
 
           {/* Delays/Stats Button */}
           <button 
             className={`flex flex-col items-center justify-center min-w-[64px] h-16 rounded-xl transition-all ${
-              activeTab === 'delays'
+              activeTab === 'delays' 
                 ? 'bg-blue-100 text-blue-600'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
             onClick={() => {
               setActiveTab('delays');
               setShowStats(!showStats);
+              setShowReportModal(false);
+              setShowProfile(false);
+              setShowMobileMenu(false);
             }}
           >
             <Activity className="w-6 h-6 mb-1" />
@@ -393,34 +400,16 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Report Modal - Above Navbar */}
+      {/* Report Panel */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowReportModal(false)}
-          />
-          
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h3 className="font-bold text-lg">Report Transit Delay</h3>
-              <button 
-                className="btn btn-sm btn-circle btn-ghost"
-                onClick={() => setShowReportModal(false)}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6">
-              <ReportDelayForm 
-                onSubmit={handleReportSubmit}
-                isSubmitting={isSubmitting}
-              />
-            </div>
-          </div>
-        </div>
+        <ReportPanel
+          onSubmit={handleReportSubmit}
+          isSubmitting={isSubmitting}
+          onClose={() => {
+            setShowReportModal(false);
+            setActiveTab('map');
+          }}
+        />
       )}
 
       {/* Live Delays Panel */}

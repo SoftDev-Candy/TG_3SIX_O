@@ -45,15 +45,15 @@ export default function ProfilePanel({ user, onClose }: ProfilePanelProps) {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[1001] max-h-[85vh] overflow-hidden"
+        className="absolute bottom-20 left-0 right-0 bg-white/95 backdrop-blur-sm rounded-t-3xl shadow-2xl z-[1001] max-h-[70vh] overflow-hidden mx-4"
       >
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
-          <h2 className="text-xl font-bold text-gray-900">Profile</h2>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+          <h2 className="font-bold text-lg">Profile</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="btn btn-ghost btn-sm btn-circle"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -94,21 +94,21 @@ export default function ProfilePanel({ user, onClose }: ProfilePanelProps) {
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[1001] max-h-[85vh] overflow-hidden flex flex-col"
+      className="absolute bottom-20 left-0 right-0 bg-white/95 backdrop-blur-sm rounded-t-3xl shadow-2xl z-[1001] max-h-[70vh] overflow-hidden flex flex-col mx-4"
     >
-      {/* Header - Sticky */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
-        <h2 className="text-xl font-bold text-gray-900">My Profile</h2>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+        <h2 className="font-bold text-lg">My Profile</h2>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="btn btn-ghost btn-sm btn-circle"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Content - Scrollable */}
-      <div className="overflow-y-auto flex-1 px-6 py-6 space-y-6">
+      <div className="overflow-y-auto flex-1 p-4 space-y-4">
         {/* User Info Card */}
         <Card>
           <CardHeader className="pb-3">
