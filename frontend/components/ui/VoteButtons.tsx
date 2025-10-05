@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VoteStats } from '@/types';
 import { cn } from '@/lib/utils';
@@ -76,8 +75,8 @@ export default function VoteButtons({
           sizeClasses[size],
           'p-0 rounded-full transition-all duration-200',
           upvoteActive
-            ? 'bg-green-100 text-green-600 hover:bg-green-200'
-            : 'text-gray-500 hover:text-green-600 hover:bg-green-50',
+            ? 'bg-green-100 hover:bg-green-200'
+            : 'hover:bg-green-50',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         onClick={() => handleVote('upvote')}
@@ -85,7 +84,7 @@ export default function VoteButtons({
         aria-label={upvoteActive ? `Remove upvote (${voteStats.upvotes} upvotes)` : `Upvote report (${voteStats.upvotes} upvotes)`}
         title={upvoteActive ? 'Click to remove upvote' : 'Click to upvote'}
       >
-        <ChevronUp className={cn(iconSizes[size], upvoteActive && 'stroke-2')} />
+        <span className={cn('text-base', upvoteActive && 'scale-110')}>👍</span>
       </Button>
 
       {/* Vote Count */}
@@ -109,8 +108,8 @@ export default function VoteButtons({
           sizeClasses[size],
           'p-0 rounded-full transition-all duration-200',
           downvoteActive
-            ? 'bg-red-100 text-red-600 hover:bg-red-200'
-            : 'text-gray-500 hover:text-red-600 hover:bg-red-50',
+            ? 'bg-red-100 hover:bg-red-200'
+            : 'hover:bg-red-50',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         onClick={() => handleVote('downvote')}
@@ -118,7 +117,7 @@ export default function VoteButtons({
         aria-label={downvoteActive ? `Remove downvote (${voteStats.downvotes} downvotes)` : `Downvote report (${voteStats.downvotes} downvotes)`}
         title={downvoteActive ? 'Click to remove downvote' : 'Click to downvote'}
       >
-        <ChevronDown className={cn(iconSizes[size], downvoteActive && 'stroke-2')} />
+        <span className={cn('text-base', downvoteActive && 'scale-110')}>👎</span>
       </Button>
     </div>
   );

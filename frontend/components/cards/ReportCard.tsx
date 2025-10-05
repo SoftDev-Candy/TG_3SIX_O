@@ -79,82 +79,69 @@ export default function ReportCard({
         "w-full transition-all",
         isOwnReport && "ring-2 ring-blue-500 bg-blue-50/30"
       )}>
-        <CardContent className="p-4">
-          {isOwnReport && (
-            <div className="flex items-center gap-1 mb-2">
-              <Badge className="bg-blue-600 text-white text-[10px] px-2 py-0.5">
-                Your Report
+        <CardContent className="px-3 py-2">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-200">
+            <span className="text-xl">{transportIcons[report.transportType]}</span>
+            <div className="flex-1">
+              <div className="font-semibold text-sm">Line {report.line}</div>
+              {report.vehicleNumber && (
+                <div className="text-[10px] text-gray-500">#{report.vehicleNumber}</div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isOwnReport && (
+                <Badge className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5">
+                  Your Report
+                </Badge>
+              )}
+              <Badge className={cn('text-[10px] px-1.5 py-0.5', severityConfig[report.severity].color)}>
+                {severityConfig[report.severity].label.toUpperCase()}
               </Badge>
             </div>
-          )}
-          <div className="flex gap-3">
-            {/* Transport Icon & Line */}
-            <div className="flex-shrink-0 text-center">
-              <div className="text-2xl mb-1">
-                {transportIcons[report.transportType]}
-              </div>
-              <div className="flex flex-col gap-1">
-                <Badge variant="outline" className="text-xs px-1 py-0">
-                  Line {report.line}
-                </Badge>
-                {report.vehicleNumber && (
-                  <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                    #{report.vehicleNumber}
-                  </Badge>
-                )}
-              </div>
-            </div>
+          </div>
 
-            {/* Main Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <Badge className={cn('text-xs', severityConfig[report.severity].color)}>
-                  {severityConfig[report.severity].label}
-                </Badge>
-                <div className="flex items-center gap-1 text-xs">
-                  <statusDisplay.icon className={cn('h-3 w-3', statusDisplay.color)} />
-                  <span className={statusDisplay.color}>{statusDisplay.label}</span>
-                  {totalPointsEarned ? (
-                    <span className="font-semibold text-green-700">{totalPointsEarned} pts</span>
-                  ) : (isVerifying || showVoteCount) && (
-                    <span className="font-semibold text-green-700">+{report.upvotes}</span>
-                  )}
-                </div>
-              </div>
+          {/* Description */}
+          <p className="text-sm text-gray-700 mb-2 leading-relaxed">
+            {report.description}
+          </p>
 
-              <p className="text-sm text-gray-700 line-clamp-2 mb-2">
-                {report.description}
-              </p>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate">
-                    {report.location.stopName || report.location.address || 'Unknown location'}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500 flex-shrink-0">
-                  {formatDistanceToNow(new Date(report.reportedAt), { addSuffix: true })}
+          {/* Footer */}
+          <div className="pt-2 border-t border-gray-100 space-y-2">
+            {/* Row 1: Location + Time */}
+            <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-1 text-gray-600">
+                <MapPin className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">
+                  {report.location.stopName || report.location.address}
                 </span>
               </div>
+              <span className="text-gray-500 whitespace-nowrap flex-shrink-0">
+                {formatDistanceToNow(new Date(report.reportedAt), { addSuffix: true }).replace('about ', '')}
+              </span>
             </div>
-
-            {/* Voting */}
-            {showVoting && !isOwnReport && (
-              <div className="flex-shrink-0">
-                {report.status === 'pending' ? (
+            
+            {/* Row 2: Vote buttons + Status/Points */}
+            <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2">
+                {showVoting && !isOwnReport && report.status === 'pending' && (
                   <CompactVoteButtons
                     reportId={report.id}
                     voteStats={voteStats}
                     onVote={onVote}
                   />
-                ) : (
-                  <div className="text-[10px] text-gray-500 text-center px-2">
-                    Voting<br/>closed
-                  </div>
                 )}
               </div>
-            )}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <statusDisplay.icon className={cn('h-3 w-3', statusDisplay.color)} />
+                <span className={statusDisplay.color}>{statusDisplay.label}</span>
+                {totalPointsEarned ? (
+                  <span className="font-semibold text-green-700">{totalPointsEarned} pts</span>
+                ) : (isVerifying || showVoteCount) && (
+                  <span className="font-semibold text-green-700">+{report.upvotes}</span>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

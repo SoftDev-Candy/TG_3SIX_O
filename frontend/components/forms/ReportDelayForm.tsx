@@ -85,6 +85,7 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const quickFillCountRef = useRef(0);
 
   const {
     register,
@@ -290,24 +291,16 @@ export default function ReportDelayForm({ onSubmit, isSubmitting = false, initia
         category: 'crowding' as DelayCategory,
         description: 'Bus extremely crowded during rush hour. Standing room only, some passengers waiting for next bus.',
       },
-      {
-        location: {
-          lat: 50.0677,
-          lng: 19.9445,
-          address: 'Kraków Główny Station',
-          stopName: 'Dworzec Główny',
-        },
-        transportType: 'train' as TransportType,
-        line: 'S1',
-        vehicleNumber: '',
-        severity: 'moderate' as Severity,
-        category: 'weather' as DelayCategory,
-        description: 'Train delayed due to heavy rain affecting track conditions. Expected 15-20 minute delay.',
-      },
     ];
 
-    // Pick random scenario
-    const scenario = demoScenarios[Math.floor(Math.random() * demoScenarios.length)];
+    // First click always uses Tram 52 (index 1), then random
+    let scenario;
+    if (quickFillCountRef.current === 0) {
+      scenario = demoScenarios[1]; // Tram 52 - Tauron Arena
+      quickFillCountRef.current++;
+    } else {
+      scenario = demoScenarios[Math.floor(Math.random() * demoScenarios.length)];
+    }
 
     // Fill form
     setValue('location', scenario.location);

@@ -190,10 +190,28 @@ export default function MapPage() {
     }
   };
 
+  // Transform reports into map incidents
+  const mapIncidents = reports
+    .filter(report => report.transportType !== 'metro') // Filter out metro (not supported by map)
+    .map(report => ({
+      id: report.id,
+      lat: report.location.lat,
+      lng: report.location.lng,
+      type: report.transportType as 'bus' | 'tram' | 'train',
+      line: report.line,
+      vehicleNumber: report.vehicleNumber,
+      description: report.description,
+      severity: report.severity,
+      category: report.category,
+      reportedBy: report.userId, // Use userId for comparison
+      reportedAt: report.reportedAt,
+      upvotes: report.upvotes,
+    }));
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       {/* Full Viewport Leaflet Map */}
-      <LeafletMap className="absolute inset-0" />
+      <LeafletMap className="absolute inset-0" incidents={mapIncidents} currentUserId={user?.id} />
       
       {/* Map Overlay for better button visibility */}
       <div className="absolute inset-0 pointer-events-none">

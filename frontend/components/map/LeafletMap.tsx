@@ -12,13 +12,41 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-interface LeafletMapProps {
-  className?: string;
+interface DelayIncident {
+  id: string;
+  lat: number;
+  lng: number;
+  type: 'tram' | 'bus' | 'train';
+  line: string;
+  vehicleNumber?: string;
+  description: string;
+  severity: 'minor' | 'moderate' | 'severe';
+  category?: string;
+  reportedBy?: string;
+  reportedAt?: string;
+  upvotes?: number;
 }
 
-export default function LeafletMap({ className = '' }: LeafletMapProps) {
+interface LeafletMapProps {
+  className?: string;
+  incidents?: DelayIncident[];
+  currentUserId?: string;
+}
+
+export default function LeafletMap({ className = '', incidents = [], currentUserId }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const incidentMarkersRef = useRef<L.Marker[]>([]);
+
+  // Helper function for transport icons
+  const getTransportIcon = (type: string) => {
+    switch(type) {
+      case 'bus': return '🚌';
+      case 'tram': return '🚊';
+      case 'train': return '🚆';
+      default: return '🚌';
+    }
+  };
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -50,7 +78,8 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
       { lat: 50.0693, lng: 19.9534, severity: 'moderate', type: 'tram', description: 'Tram 10 - 5min delay', line: '10' },
       { lat: 50.0650, lng: 19.9413, severity: 'severe', type: 'tram', description: 'Tram 4 - 12min delay', line: '4' },
       { lat: 50.0657, lng: 19.9191, severity: 'minor', type: 'bus', description: 'Bus 173 - 2min delay', line: '173' },
-      { lat: 50.067472, lng: 19.991694, severity: 'moderate', type: 'tram', description: 'Tram 52 - 7min delay', line: '52' },
+      // Tauron Arena Tram 52 marker hidden - will show when user reports it
+      // { lat: 50.067472, lng: 19.991694, severity: 'moderate', type: 'tram', description: 'Tram 52 - 7min delay', line: '52' },
     ];
 
     // Add delay markers with light mode colors only
@@ -59,24 +88,12 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
       const getSeverityColor = (severity: string) => {
         switch(severity) {
           case 'severe': return '#DC2626';    // Red-600
-          case 'moderate': return '#EA580C';  // Orange-600
           case 'minor': return '#16A34A';     // Green-600
           default: return '#16A34A';
         }
       };
       
       const color = getSeverityColor(delay.severity);
-      
-      // Simplified transport type icons for public transit focus
-      const getTransportIcon = (type: string) => {
-        switch(type) {
-          case 'bus': return '🚌';
-          case 'tram': return '🚊';
-          case 'train': return '🚆';
-          case 'metro': return '🚇';
-          default: return '🚌';
-        }
-      };
 
       // Size hierarchy based on severity (Map UI Specification)
       const getMarkerSize = (severity: string) => {
@@ -125,21 +142,42 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
         iconAnchor: [markerConfig.iconSize / 2, markerConfig.iconSize / 2],
       });
 
-      L.marker([delay.lat, delay.lng], { icon })
+      const timeAgo = delay.reportedAt 
+        ? new Date(delay.reportedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        : '';
+      
+      const marker = L.marker([delay.lat, delay.lng], { icon })
         .addTo(map)
         .bindPopup(`
-          <div style="font-size: 14px; min-width: 200px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="font-size: 16px;">${getTransportIcon(delay.type)}</span>
-              <strong>Line ${delay.line}</strong>
+          <div style="font-size: 13px; min-width: 220px; max-width: 280px;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB;">
+              <span style="font-size: 18px;">${getTransportIcon(delay.type)}</span>
+              <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 15px;">Line ${delay.line}</div>
+                ${delay.vehicleNumber ? `<div style="font-size: 11px; color: #6B7280;">#${delay.vehicleNumber}</div>` : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="color: ${color}; font-size: 10px;">●</span>
+                <span style="color: ${color}; font-weight: bold; text-transform: uppercase; font-size: 10px;">${delay.severity}</span>
+              </div>
             </div>
-            <div style="margin-bottom: 4px;">${delay.description}</div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="color: ${color}; font-size: 12px;">●</span>
-              <span style="color: ${color}; font-weight: bold; text-transform: uppercase; font-size: 12px;">${delay.severity}</span>
+            
+            <!-- Description -->
+            <div style="margin-bottom: 8px; color: #374151; line-height: 1.4;">${delay.description}</div>
+            
+            <!-- Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6B7280; padding-top: 6px; border-top: 1px solid #F3F4F6;">
+              ${delay.reportedBy ? `<div>👤 ${delay.reportedBy}</div>` : '<div></div>'}
+              <div style="display: flex; gap: 8px; align-items: center;">
+                ${delay.upvotes ? `<span>👍 ${delay.upvotes}</span>` : ''}
+                ${timeAgo ? `<span>🕒 ${timeAgo}</span>` : ''}
+              </div>
             </div>
           </div>
         `);
+      
+      incidentMarkersRef.current.push(marker);
     });
 
     // Load transit routes from city-specific files (tram + bus)
@@ -204,16 +242,6 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
       routeNormal: 2,
       routeDelayed: 3,
       routeHover: 5,
-    };
-    
-    // Icon for popup
-    const getTransportIcon = (type: string) => {
-      switch(type) {
-        case 'bus': return '🚌';
-        case 'tram': return '🚋';
-        case 'train': return '🚆';
-        default: return '🚌';
-      }
     };
     
     // Check if route has any delays
@@ -366,6 +394,101 @@ export default function LeafletMap({ className = '' }: LeafletMapProps) {
       });
     });
   }
+
+  // Handle dynamic incident updates (when new reports are added)
+  useEffect(() => {
+    if (!mapInstanceRef.current || incidents.length === 0) return;
+    
+    const map = mapInstanceRef.current;
+    
+    // Clear existing incident markers
+    incidentMarkersRef.current.forEach(marker => marker.remove());
+    incidentMarkersRef.current = [];
+    
+    // Add incident markers from reports
+    incidents.forEach((incident) => {
+      const markerConfig = {
+        minor: { color: '#F59E0B', iconSize: 32, fontSize: 16 },
+        moderate: { color: '#EF4444', iconSize: 36, fontSize: 18 },
+        severe: { color: '#DC2626', iconSize: 40, fontSize: 20 },
+      }[incident.severity];
+      
+      const color = markerConfig.color;
+      
+      // Check if this is the user's own report
+      const isOwnReport = incident.reportedBy === currentUserId;
+      const borderColor = isOwnReport ? '#2563EB' : 'white'; // Blue for own reports
+      const borderWidth = isOwnReport ? '3px' : '2px'; // Thicker border for own reports
+      
+      const pulseAnimation = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        animation: pulse 2s ease-in-out infinite;
+      `;
+      
+      const icon = L.divIcon({
+        className: '', // Remove default Leaflet marker styles
+        html: `
+          <div style="
+            background-color: ${color};
+            width: ${markerConfig.iconSize}px;
+            height: ${markerConfig.iconSize}px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: ${borderWidth} solid ${borderColor};
+            font-size: ${markerConfig.fontSize}px;
+            color: white;
+            font-weight: bold;
+            ${pulseAnimation}
+          ">${getTransportIcon(incident.type)}</div>
+        `,
+        iconSize: [markerConfig.iconSize, markerConfig.iconSize],
+        iconAnchor: [markerConfig.iconSize / 2, markerConfig.iconSize / 2],
+      });
+      
+      const timeAgo = incident.reportedAt 
+        ? new Date(incident.reportedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        : '';
+      
+      const marker = L.marker([incident.lat, incident.lng], { icon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-size: 13px; min-width: 220px; max-width: 280px;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB;">
+              <span style="font-size: 18px;">${getTransportIcon(incident.type)}</span>
+              <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 15px;">Line ${incident.line}</div>
+                ${incident.vehicleNumber ? `<div style="font-size: 11px; color: #6B7280;">#${incident.vehicleNumber}</div>` : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="color: ${color}; font-size: 10px;">●</span>
+                <span style="color: ${color}; font-weight: bold; text-transform: uppercase; font-size: 10px;">${incident.severity}</span>
+              </div>
+            </div>
+            
+            <!-- Description -->
+            <div style="margin-bottom: 8px; color: #374151; line-height: 1.4;">${incident.description}</div>
+            
+            <!-- Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6B7280; padding-top: 6px; border-top: 1px solid #F3F4F6;">
+              ${incident.reportedBy ? `<div>👤 ${incident.reportedBy}</div>` : '<div></div>'}
+              <div style="display: flex; gap: 8px; align-items: center;">
+                ${incident.upvotes ? `<span>👍 ${incident.upvotes}</span>` : ''}
+                ${timeAgo ? `<span>🕒 ${timeAgo}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `);
+      
+      incidentMarkersRef.current.push(marker);
+    });
+  }, [incidents]);
 
   return (
     <div 
