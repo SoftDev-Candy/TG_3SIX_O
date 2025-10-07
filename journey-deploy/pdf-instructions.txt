@@ -1,0 +1,18 @@
+PDF Generation Instructions
+============================
+
+The markdown files are available at:
+- https://tgsixo.surge.sh/executive-brief.md
+- https://tgsixo.surge.sh/narrative.md
+
+To generate PDFs locally, install pandoc:
+  sudo apt install pandoc wkhtmltopdf  # Linux
+  brew install pandoc wkhtmltopdf      # macOS
+
+Then run:
+  pandoc docs/EXECUTIVE_BRIEF.md -o journey-deploy/executive-brief.pdf
+  pandoc docs/HACKATHON_NARRATIVE_PRD.md -o journey-deploy/narrative.pdf
+  
+Or use online converters:
+  https://www.markdowntopdf.com/
+  https://md2pdf.netlify.app/
