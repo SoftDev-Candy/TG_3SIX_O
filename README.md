@@ -1,31 +1,122 @@
-🚦 Guardian: Real-Time Traffic Intelligence System
-Guardian is a high-performance C++17 traffic simulation system that provides real-time routing intelligence with dynamic incident handling and live frontend visualization.
-✨ Features
+🚦 TG_3SIXO: Predictive Transport Intelligence System
 
-🗺️ Graph-Based Routing: Advanced shortest path calculation using Dijkstra's algorithm
-⚠️ Dynamic Incident Processing: Real-time road incidents (minor, moderate, severe) with automatic travel time adjustments and configurable severity multipliers
-📡 Live Updates: Backend streams adjusted ETAs and routes continuously via Server-Sent Events (SSE)
-🔄 Concurrency & Thread Safety: Robust multi-threading with mutexes, atomics, and condition variables for safe live state management
-🏗️ Modern C++ Architecture: Clean header/implementation separation following modern C++17 best practices
-🌐 Frontend Integration: React dashboard with real-time SSE stream visualization showing baseline vs. adjusted routes
+Travel Guardian 360 (codename: TG 3SIX O) is a real-time, AI-driven transport forecasting platform.
+It combines live transit feeds, community reports, and a C++17 predictive engine to forecast upcoming delays, recommend alternative routes, and alert users before disruptions hit.
 
-🛠️ Tech Stack
-ComponentTechnologyBackendC++17, Custom HTTP Server, nlohmann::jsonFrontendReact, Server-Sent Events (SSE)AlgorithmsDijkstra's shortest path, dynamic graph adjustmentsConcurrencystd::thread, std::mutex, std::condition_variable, std::atomic
-🚀 Quick Start
-Prerequisites
+✨ Key Highlights
+Module	Purpose
+🧭 Routing Engine (C++)	Graph-based shortest path routing (Dijkstra) with live weight adjustment for incidents.
+⚙️ Transit DNA Predictor	Learns from historical disruptions to forecast probable future delays (+X minutes).
+👥 Persona System	Simulates commuter journeys (e.g., “Sarah”) with personalized delay predictions.
+🕒 Calendar Conflict Detection	Detects ETA clashes with user events from .ics files.
+🛰️ GTFS Live Integration (Python)	Sidecar microservice that fetches real-time Kraków bus & tram data and feeds it to C++.
+🔄 SSE Streaming	Continuous server-sent events push live ETA, delay, and prediction updates to frontend.
+🧰 User Reports + Dispatcher API	FastAPI microservice for crowdsourced incident reports and verified dispatcher inputs.
+🎯 Proactive Alerts	AI proactively warns “⚠️ Likely +12 min delay” before it happens.
+🧱 Architecture Overview
++-------------------------------+
+|         Frontend (JS/HTML)    |
+|  Leaflet map + SSE dashboard  |
++---------------┬---------------+
+                │ REST + SSE
++---------------▼---------------+
+|       C++17 Backend Server     |
+|  ├── Routing Engine (Dijkstra) |
+|  ├── Incident Store (Threaded) |
+|  ├── TransitDNA (Prediction)   |
+|  ├── Personas + Calendar       |
+|  └── SSE Dispatcher            |
++---------------┬---------------+
+                │ JSON bridge
++---------------▼---------------+
+|   Python FastAPI Services     |
+|  ├── GTFS Sidecar (Live Feed) |
+|  └── User / Dispatcher API     |
++-------------------------------+
 
-C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
-Node.js 14+ (for frontend)
-nlohmann::json library
+💡 How It Works
 
-Installation and demo 
-(COMING SOON)
+==Official feeds (GTFS Realtime) and user reports stream into the backend.
+==Transit DNA analyzes recent incident patterns to predict upcoming delays.
+==Routing Engine recomputes paths with adjusted weights in real time.
+==Frontend (Leaflet dashboard) displays baseline vs. adjusted routes, ETAs, and proactive alerts.
+==Personas simulate daily commuters, while calendar integration detects potential conflicts (“⚠ Meeting at 09:00 may conflict with ETA 09:10”).
 
--------
-How to run Python backend:
+🧮 Predictive Engine
 
-make sure your venv is active and you have all modules installed <br>
-navigate to ./pythonsrc/UserAPI/ <br>
-python main.py <br>
-in order to view api docs goto <br>
-go to http://127.0.0.1:8000/docs/ <br>
+Powered by a lightweight ML heuristic system:
+Rolling averages & node severity models.
+Optional integration with Amazon Chronos (time-series model) via Python.
+
+Predicts delay windows, e.g.
+96% chance of +12 min delay at Stop 4.
+
+💾 Tech Stack
+Layer	Technology
+Backend Core	C++17, cpp-httplib, nlohmann::json
+Concurrency	std::thread, mutex, condition_variable
+Prediction	Custom TransitDNA engine / Chronos (Python)
+APIs	FastAPI (Python), REST, SSE
+Frontend	Vanilla JS + Leaflet (map visualization)
+Data	GTFS-RT (Kraków), .ics Calendar, User Reports
+Future DB	SQLite / PostgreSQL planned
+
+
+⚙️ Installation & Running
+1️⃣ Backend (C++)
+# Compile and run
+mkdir build && cd build
+cmake ..
+make
+./journey_radar
+Server starts on http://localhost:8080
+
+2️⃣ Frontend
+Open frontend/index.html in your browser.
+It connects automatically via SSE to backend on port 8080.
+
+3️⃣ Python Services
+a) GTFS Sidecar
+cd python_code
+uvicorn gtfs_sidecar:app --port 9999
+
+b) User API
+cd python_code/UserAPI
+python main.py
+# Docs at: http://127.0.0.1:8000/docs
+
+📹 Demo Videos & Links
+Part	Link
+🎥 Full System Demo	YouTube – Journey Radar Demo
+
+🧭 Routing Engine Explained	 Watch → Add link here for youTube
+🔮 Transit DNA Prediction Showcase	Watch →
+//Please add more video links here // 
+
+🆚 Why It’s Better Than Existing Solutions
+Problem with existing systems	How Journey Radar solves it
+Reactive apps (Google Maps, Jak Dojadę) show delays after they happen	Predictive alerts forecast upcoming disruptions
+Data silos between operators and users	Unified intelligence merges GTFS, reports, and calendar data
+No personalization	Personas adapt forecasts to individual journeys
+No open APIs for dispatchers	REST endpoints allow seamless dispatcher integration
+Limited local insights	Community-verified reports enhance accuracy
+
+🌍 Scalability & Market
+Works with any city providing GTFS Realtime feeds.
+Extendable to sensors on buses/trams or IoT traffic devices.
+Cloud-ready microservice design (FastAPI + C++).
+Potential integration with city dashboards, Google Transit, or MaaS platforms.
+
+🧑‍💻 Team & Credits
+Lead Developer: Swastik — C++ Systems Engineer & Product Architect
+Collaborators: Data & AI Integration – Marvellous, Frontend Design – [Your teammate name]
+
+🏁 Future Roadmap
+Persistent database (SQLite → Postgres + Timescale).
+Extended AI pipeline (Chronos + Prophet models).
+Mobile app & Push Notifications.
+Reward system & gamified user submissions.
+City dashboard for dispatchers and operators.
+
+🛡️ License
+MIT License — free for non-commercial and educational use.
