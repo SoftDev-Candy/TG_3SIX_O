@@ -13,8 +13,14 @@ Module	Purpose
 🔄 SSE Streaming	Continuous server-sent events push live ETA, delay, and prediction updates to frontend.
 🧰 User Reports + Dispatcher API	FastAPI microservice for crowdsourced incident reports and verified dispatcher inputs.
 🎯 Proactive Alerts	AI proactively warns “⚠️ Likely +12 min delay” before it happens.
-🧱 Architecture Overview
-<img width="400" height="600" alt="Architecture" src="https://github.com/user-attachments/assets/fb62c843-b2c5-4289-9a17-2869384cf7f0" />
+
+
+
+
+<img width="400" height="600" alt="Architecture" src="https://github.com/user-attachments/assets/fb62c843-b2c5-4289-9a17-2869384cf7f0" />  
+
+
+
 
 💡 How It Works
 
