@@ -1,9 +1,9 @@
-🚦 TG_3SIXO: Predictive Transport Intelligence System
+🚦 **TG_3SIXO: Predictive Transport Intelligence System**
 
 Travel Guardian 360 (codename: TG 3SIX O) is a real-time, AI-driven transport forecasting platform.
 It combines live transit feeds, community reports, and a C++17 predictive engine to forecast upcoming delays, recommend alternative routes, and alert users before disruptions hit.
 
-✨ Key Highlights
+**✨ Key Highlights**
 Module	Purpose
 🧭 Routing Engine (C++)	Graph-based shortest path routing (Dijkstra) with live weight adjustment for incidents.
 ⚙️ Transit DNA Predictor	Learns from historical disruptions to forecast probable future delays (+X minutes).
@@ -17,7 +17,8 @@ Module	Purpose
 
 
 
-<img width="400" height="600" alt="Architecture" src="https://github.com/user-attachments/assets/fb62c843-b2c5-4289-9a17-2869384cf7f0" />  
+<img width="600" alt="Architecture Overview"
+     src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/Architecture-min.png" />
 
 
 
