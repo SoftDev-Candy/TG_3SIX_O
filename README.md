@@ -6,12 +6,19 @@ It combines live transit feeds, community reports, and a C++17 predictive engine
 **✨ Key Highlights**
 Module	Purpose
 🧭 Routing Engine (C++)	Graph-based shortest path routing (Dijkstra) with live weight adjustment for incidents.
+
 ⚙️ Transit DNA Predictor	Learns from historical disruptions to forecast probable future delays (+X minutes).
+
 👥 Persona System	Simulates commuter journeys (e.g., “Sarah”) with personalized delay predictions.
+
 🕒 Calendar Conflict Detection	Detects ETA clashes with user events from .ics files.
+
 🛰️ GTFS Live Integration (Python)	Sidecar microservice that fetches real-time Kraków bus & tram data and feeds it to C++.
+
 🔄 SSE Streaming	Continuous server-sent events push live ETA, delay, and prediction updates to frontend.
+
 🧰 User Reports + Dispatcher API	FastAPI microservice for crowdsourced incident reports and verified dispatcher inputs.
+
 🎯 Proactive Alerts	AI proactively warns “⚠️ Likely +12 min delay” before it happens.
 
 
