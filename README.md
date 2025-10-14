@@ -14,6 +14,8 @@ Module	Purpose
 🧰 User Reports + Dispatcher API	FastAPI microservice for crowdsourced incident reports and verified dispatcher inputs.
 🎯 Proactive Alerts	AI proactively warns “⚠️ Likely +12 min delay” before it happens.
 🧱 Architecture Overview
+
+
 +-------------------------------+
 |         Frontend (JS/HTML)    |
 |  Leaflet map + SSE dashboard  |
