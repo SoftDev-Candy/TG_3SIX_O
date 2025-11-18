@@ -105,7 +105,7 @@ Potential integration with city dashboards, Google Transit, or MaaS platforms.
 
 🧑‍💻 Team & Credits
 Lead Developer: Swastik — C++ Systems Engineer & Product Architect
-Collaborators: Data & AI Integration – Marvellous, Frontend Design – [Your teammate name]
+Collaborators: Data & AI Integration – Marvellous, Frontend Design – Swastik , Thofeeq , API for Traffic Data visualization - Kubo , Project Management - Binh
 
 🏁 Future Roadmap
 Persistent database (SQLite → Postgres + Timescale).
