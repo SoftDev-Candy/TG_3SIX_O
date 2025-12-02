@@ -1,0 +1,14 @@
+[
+  {
+    "route": 1,
+    "predicted_delay_minutes": 4.5
+  },
+  {
+    "route": 2,
+    "predicted_delay": "8.2 minutes"
+  },
+  {
+    "route": "3",
+    "predicted_delay": "12 minutes"
+  }
+]

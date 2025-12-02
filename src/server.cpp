@@ -42,6 +42,25 @@ static int g_next_monitor_id = 1;
     static std::mutex g_personas_mutex;
     static std::map<std::string, nlohmann::json> g_personas; // key = name -> persona JSON
 
+    // --- ML forecasts (Chronos output) ---
+    static std::mutex g_ml_mutex;
+    static nlohmann::json g_ml_forecasts = nlohmann::json::array(); // array of objs from forecasts.json
+
+    // helper: parse "12.3 minutes" -> 12.3 (double), or if numeric, accept directly
+    static double parse_pred_minutes(const nlohmann::json& v) {
+        try {
+            if (v.is_number()) return v.get<double>();
+            if (v.is_string()) {
+                std::string s = v.get<std::string>();
+                // strip non-numeric suffix/prefix (very lenient)
+                std::string t; t.reserve(s.size());
+                for (char c : s) if ((c >= '0' && c <= '9') || c == '.' || c == '-') t.push_back(c);
+                return t.empty() ? 0.0 : std::stod(t);
+            }
+        }
+        catch (...) {}
+        return 0.0;
+    }
 
 // Very small helper: parse a single DTSTART line like "DTSTART:20250930T090000Z" or "DTSTART:20250930T090000"
 static long long parse_ics_dtstart(const std::string& line) {
@@ -396,6 +415,155 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
             }
             });
 
+        // POST /ml/forecasts  (body = forecasts.json content)
+// Accepts either the array produced by your teammate or an object {"data":[...]}
+        svr.Post("/ml/forecasts", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+            try {
+                auto body = nlohmann::json::parse(req.body);
+                nlohmann::json arr;
+                if (body.is_array()) arr = body;
+                else if (body.contains("data")) arr = body["data"];
+                else arr = nlohmann::json::array();
+
+                if (!arr.is_array()) {
+                    res.status = 400;
+                    res.set_content(nlohmann::json({ {"error","expected array"} }).dump(), "application/json");
+                     return;
+                }
+
+                size_t imported = 0;
+                {
+                    std::lock_guard<std::mutex> lg(g_ml_mutex);
+                    g_ml_forecasts = nlohmann::json::array();
+                    for (auto& it : arr) {
+                        // normalize shape: {route:int, predicted_delay_minutes:double, probability:string, status:string, predicted_time:string}
+                        nlohmann::json out;
+                        out["route"] = it.value("route", -1);
+                        out["predicted_delay_minutes"] = parse_pred_minutes(it.value("predicted_delay", 0));
+                        out["probability"] = it.value("probability", "");
+                        out["status"] = it.value("status", "");
+                        out["predicted_time"] = it.value("predicted_time", "");
+                        out["current_time"] = it.value("current_time", "");
+                        g_ml_forecasts.push_back(out);
+                        imported++;
+                    }
+                }
+
+                // wake SSE clients
+                g_events_flag.store(true);
+                g_events_cv.notify_all();
+
+                res.set_content(nlohmann::json({ {"imported", imported} }).dump(), "application/json");
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
+            }
+            });
+        // POST /ml/forecasts  (body = forecasts.json content)
+        // Accepts either the array produced by your teammate or an object {"data":[...]}
+        svr.Post("/ml/forecasts", [&set_cors](const httplib::Request& req, httplib::Response& res) {
+            set_cors(res);
+
+            // --- Robust parse: accept array root OR { "data": [...] } ---
+            nlohmann::json body;
+            try {
+                body = nlohmann::json::parse(req.body);
+            }
+            catch (const std::exception& e) {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error", std::string("invalid JSON: ") + e.what()} }).dump(), "application/json");
+                return;
+            }
+
+            // Determine array to read
+            nlohmann::json arr;
+            if (body.is_array()) arr = body;
+            else if (body.contains("data") && body["data"].is_array()) arr = body["data"];
+            else {
+                res.status = 400;
+                res.set_content(nlohmann::json({ {"error","expected an array or {\"data\":[...]}"} }).dump(), "application/json");
+                return;
+            }
+
+            // helper to parse "X minutes" strings
+            auto parse_minutes = [](const nlohmann::json& j, const char* key, double& out) -> bool {
+                if (j.contains(key)) {
+                    if (j[key].is_number()) { out = j[key].get<double>(); return true; }
+                    if (j[key].is_string()) {
+                        std::string s = j[key].get<std::string>();
+                        const char* p = s.c_str();
+                        char* endp = nullptr;
+                        double v = std::strtod(p, &endp);
+                        if (endp != p) { out = v; return true; }
+                    }
+                }
+                return false;
+                };
+
+            int imported = 0;
+            {
+                std::lock_guard<std::mutex> lg(g_ml_mutex);
+                g_ml_forecasts = nlohmann::json::array();
+                for (const auto& it : arr) {
+                    if (!it.is_object()) continue;
+                    int route = -1;
+                    if (it.contains("route") && it["route"].is_number_integer())
+                        route = it["route"].get<int>();
+                    else if (it.contains("route") && it["route"].is_string()) {
+                        try { route = std::stoi(it["route"].get<std::string>()); }
+                        catch (...) { route = -1; }
+                    }
+                    if (route < 0) continue;
+
+                    // --- tolerant parser for "X minutes" strings or numeric ---
+                    double minutes = 0.0;
+                    if (it.contains("predicted_delay_minutes")) {
+                        if (it["predicted_delay_minutes"].is_number())
+                            minutes = it["predicted_delay_minutes"].get<double>();
+                        else if (it["predicted_delay_minutes"].is_string()) {
+                            std::string s = it["predicted_delay_minutes"].get<std::string>();
+                            char* endp = nullptr;
+                            double v = std::strtod(s.c_str(), &endp);
+                            if (endp != s.c_str()) minutes = v;
+                        }
+                    }
+                    else if (it.contains("predicted_delay")) {
+                        if (it["predicted_delay"].is_number())
+                            minutes = it["predicted_delay"].get<double>();
+                        else if (it["predicted_delay"].is_string()) {
+                            std::string s = it["predicted_delay"].get<std::string>();
+                            char* endp = nullptr;
+                            double v = std::strtod(s.c_str(), &endp);
+                            if (endp != s.c_str()) minutes = v;
+                        }
+                    }
+
+                    nlohmann::json rec = {
+                        {"route", route},
+                        {"predicted_delay_minutes", minutes}
+                    };
+                    g_ml_forecasts.push_back(rec);
+                    imported++;
+
+                    g_ml_forecasts.push_back(rec);
+                    imported++;
+                }
+            }
+
+            g_events_flag.store(true);
+            g_events_cv.notify_all();
+
+            res.set_content(nlohmann::json({ {"imported", imported} }).dump(), "application/json");
+            });
+
+        svr.Get("/ml/forecasts", [&set_cors](const httplib::Request&, httplib::Response& res) {
+            set_cors(res);
+            std::lock_guard<std::mutex> lg(g_ml_mutex);
+            res.set_content(g_ml_forecasts.dump(), "application/json");
+            });
+
         // POST /calendar/add  (dev helper: add single event by JSON { "start_epoch": 12345, "summary": "text" })
         svr.Post("/calendar/add", [&set_cors](const httplib::Request& req, httplib::Response& res) {
             set_cors(res);
@@ -422,10 +590,6 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                 res.set_content(nlohmann::json({ {"error", e.what()} }).dump(), "application/json");
             }
             });
-
-
-
-
 
         // GET /incidents
         svr.Get("/incidents", [&set_cors](const httplib::Request&, httplib::Response& res) {
@@ -923,10 +1087,70 @@ nlohmann::json compute_route_pair(const Graph& GRAPH, int src, int dst) {
                                     }
                                 }
                                 payload["dna_summary"] = dna_out;
+                                // --- attach ML forecasts ---
+                                nlohmann::json ml;
+                                {
+                                    std::lock_guard<std::mutex> lg(g_ml_mutex);
+                                    ml = g_ml_forecasts; // copy
+                                }
+                                if (!ml.is_array()) ml = nlohmann::json::array();
+                                payload["ml_forecasts"] = ml;
+
+                                // --- optional: push alerts if any predicted delay is large ---
+                                try {
+                                    const double ML_ALERT_THRESHOLD = 10.0; // minutes, tune for demo
+                                    nlohmann::json alerts = nlohmann::json::array();
+                                    for (auto& item : ml) {
+                                        double pm = item.value("predicted_delay_minutes", 0.0);
+                                        if (pm >= ML_ALERT_THRESHOLD) {
+                                            alerts.push_back({
+                                                {"route", item.value("route",-1)},
+                                                {"predicted_extra_minutes", pm},
+                                                {"message", std::string("Forecast: route ") + std::to_string(item.value("route",-1)) +
+                                                            " likely delayed ~" + std::to_string((int)std::round(pm)) + " min"}
+                                                });
+                                        }
+                                    }
+                                    if (!alerts.empty()) payload["ml_alerts"] = alerts;
+                                }
+                                catch (...) {}
+
+
                             }
                             catch (...) {
                                 payload["dna_summary"] = nlohmann::json::object();
                             }
+
+                            // --- attach ML forecasts ---
+                            nlohmann::json ml;
+                            {
+                                std::lock_guard<std::mutex> lg(g_ml_mutex);
+                                ml = g_ml_forecasts; // copy
+                            }
+                            if (!ml.is_array()) ml = nlohmann::json::array();
+                            payload["ml_forecasts"] = ml;
+
+                            // --- optional: push alerts if any predicted delay is large ---
+                            try {
+                                const double ML_ALERT_THRESHOLD = 10.0; // minutes, tune for demo
+                                nlohmann::json alerts = nlohmann::json::array();
+                                for (auto& item : ml) {
+                                    double pm = item.value("predicted_delay_minutes", 0.0);
+                                    if (pm >= ML_ALERT_THRESHOLD) {
+                                        alerts.push_back({
+                                            {"route", item.value("route",-1)},
+                                            {"predicted_extra_minutes", pm},
+                                            {"message", std::string("Forecast: route ") + std::to_string(item.value("route",-1)) +
+                                                        " likely delayed ~" + std::to_string((int)std::round(pm)) + " min"}
+                                            });
+                                    }
+                                }
+                                if (!alerts.empty()) payload["ml_alerts"] = alerts;
+                            }
+                            catch (...) {}
+
+
+
 
 
 

@@ -80,6 +80,12 @@
                 <button id="uploadIcsBtn" class="btn">Upload Calendar</button>
                 <div id="calendarStatus" style="font-size:12px;margin-top:6px"></div>
             </div>
+            <div style="margin-top:8px">
+                <label>Upload forecasts.json:</label>
+                <input type="file" id="mlFile" accept=".json" />
+                <button id="uploadMlBtn" class="btn">Upload Forecasts</button>
+            </div>
+
 
         </div>
         <div style="margin-top:8px">
@@ -524,6 +530,28 @@
             const src = Number(document.getElementById('src').value);
             const dst = Number(document.getElementById('dst').value);
             computeRoute(src, dst);
+        });
+        document.getElementById('uploadMlBtn').addEventListener('click', async () => {
+            const inp = document.getElementById('mlFile');
+            const statusEl = document.getElementById('calendarStatus'); // reuse small status div
+            if (!inp || !inp.files || !inp.files.length) {
+                if (statusEl) statusEl.innerText = "Select forecasts.json first.";
+                return;
+            }
+            const file = inp.files[0];
+            const text = await file.text().catch(() => null);
+            if (!text) return;
+            try {
+                const resp = await fetch(API + '/ml/forecasts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: text
+                });
+                const j = await resp.json();
+                if (statusEl) statusEl.innerText = `Forecasts imported: ${j.imported ?? 0}`;
+            } catch (e) {
+                if (statusEl) statusEl.innerText = "Forecast upload failed: " + e.message;
+            }
         });
 
         document.getElementById('simulateBtn').addEventListener('click', async () => {
