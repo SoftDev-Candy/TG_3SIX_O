@@ -59,18 +59,18 @@ It’s designed as a hackathon-style proof-of-concept that is **fast, debuggable
 **Website (demos hub)**  
 - https://tg3sixo.surge.sh/#demos
 
-- **Full System Demo (video)** 
-## 🎥 Full Demo
+ **System Demo (video)**
+<div align="center">
 
-▶ **[Watch on GitHub](https://github.com/SoftDev-Candy/TG_3SIX_O/blob/main/docs/TG_3IXO.mp4)**
+[![Watch the Journey Radar Demo](https://img.youtube.com/vi/ErK83rvRMe0/maxresdefault.jpg)](https://youtu.be/ErK83rvRMe0)
 
 </div>
-       
+
 
 **Krakow live bus map (video)**  
 
 <p align="center">
-  <img width="820" alt="KrakowBusmap"
+  <img width="500" alt="KrakowBusmap"
        src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/realtime1.png" />
 </p>
 
@@ -82,7 +82,7 @@ It’s designed as a hackathon-style proof-of-concept that is **fast, debuggable
 ## 🧱 Architecture (Preview)
 
 <p align="center">
-  <img width="820" alt="Architecture Overview"
+  <img width="400" alt="Architecture Overview"
        src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/Architecture-min.png" />
 </p>
 
