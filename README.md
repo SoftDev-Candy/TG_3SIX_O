@@ -53,19 +53,24 @@ It’s designed as a hackathon-style proof-of-concept that is **fast, debuggable
 | 🎯 **Proactive Alerts** | “⚠ Likely +12 min delay” warnings before the delay is visible in typical apps |
 
 ---
-
-## 📹 Demos
-
-**Website (demos hub)**  
-- https://tg3sixo.surge.sh/#demos
-
- **System Demo (video)**
 <div align="center">
 
-[![Watch the Journey Radar Demo](https://img.youtube.com/vi/ErK83rvRMe0/maxresdefault.jpg)](https://youtu.be/ErK83rvRMe0)
+## 🎥 Full Project Demo
+
+<a href="https://youtu.be/ErK83rvRMe0" target="_blank">
+  <img src="https://img.youtube.com/vi/ErK83rvRMe0/maxresdefault.jpg" width="700" style="border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.4);" />
+</a>
+
+<br>
+
+▶ Click the image to watch the full demo
 
 </div>
 
+
+
+**Website (demos hub)**  
+- https://tg3sixo.surge.sh/#demos
 
 **Krakow live bus map (video)**  
 
