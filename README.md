@@ -1,203 +1,253 @@
-## TG_3SIXO or Journey Radar: Predictive Transport Intelligence System 
+<h1 align="center">TG_3SIXO / Journey Radar</h1>
 
-Travel Guardian 360 (codename: TG 3SIX O) is a real-time, AI-driven transport forecasting platform.
-It combines live transit feeds, community reports, and a C++17 predictive engine to forecast upcoming delays, recommend alternative routes, and alert users before disruptions hit.
+<p align="center">
+  <strong>Predictive Transport Intelligence System</strong><br/>
+  Real-time disruption monitoring + routing + lightweight forecasting which is built around a <strong>C++17</strong> core.
+</p>
 
-**✨ Key Highlights**
-Module Purpose
-🧭 Routing Engine (C++)	Graph-based shortest path routing (Dijkstra) with live weight adjustment for incidents.
+<p align="center">
+  <!-- Optional badges (edit as you like) -->
+  <img alt="C++" src="https://img.shields.io/badge/C%2B%2B-17-blue" />
+  <img alt="Build" src="https://img.shields.io/badge/build-CMake-success" />
+  <img alt="Backend" src="https://img.shields.io/badge/backend-cpp--httplib%20%2B%20FastAPI-informational" />
+  <img alt="Frontend" src="https://img.shields.io/badge/frontend-Vanilla%20JS%20%2B%20Leaflet-orange" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-lightgrey" />
+</p>
 
-⚙️ Transit DNA Predictor	Learns from historical disruptions to forecast probable future delays (+X minutes).
+<p align="center">
+  <a href="#-demos">Demos</a> •
+  <a href="#-why-this-exists">Why</a> •
+  <a href="#-system-overview">System Overview</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-quickstart">Quickstart</a> •
+  <a href="#-services--modules">Modules</a> •
+  <a href="#-roadmap">Roadmap</a>
+</p>
 
-👥 Persona System	Simulates commuter journeys (e.g., “Sarah”) with personalized delay predictions.
+---
 
-🕒 Calendar Conflict Detection	Detects ETA clashes with user events from .ics files.
+## What is TG_3SIXO?
 
-🛰️ GTFS Live Integration (Python)	Sidecar microservice that fetches real-time Kraków bus & tram data and feeds it to C++.
+**TG_3SIXO (Journey Radar / Travel Guardian 360)** is a real-time transport platform that combines:
+- **official live transit feeds** (GTFS Realtime),
+- **community + dispatcher reports**, and
+- a **C++17 routing + prediction engine**
 
-🔄 SSE Streaming	Continuous server-sent events push live ETA, delay, and prediction updates to frontend.
+…to **forecast delays**, **recompute routes** under incidents, and **push proactive alerts** to a live map UI.
 
-🧰 User Reports + Dispatcher API	FastAPI microservice for crowdsourced incident reports and verified dispatcher inputs.
+It’s designed as a hackathon-style proof-of-concept that is **fast, debuggable, and modular** (C++ performance core + Python sidecars).
 
-🎯 Proactive Alerts	AI proactively warns “⚠️ Likely +12 min delay” before it happens.
+---
 
-📹 Demo Videos & Links
-Website link
-https://tg3sixo.surge.sh/#demos
+## ✨ Key Highlights
 
-**User-Reported Disruptions**
-https://youtu.be/ThRl0xW28rs
+| Module | Purpose |
+|---|---|
+| 🧭 **Routing Engine (C++)** | Graph shortest-path routing (Dijkstra) with incident-aware live weight updates |
+| ⚙️ **TransitDNA Predictor** | Lightweight forecasting from rolling disruption history (predict “likely +X min”) |
+| 👥 **Persona Journeys** | Simulated commuter profiles (e.g., “Sarah”) for personalized delay impact |
+| 🕒 **Calendar Conflict Detection** | Detect ETA clashes with user events from `.ics` calendar files |
+| 🛰️ **GTFS Live Sidecar (Python)** | Fetches/normalizes live vehicle + trip updates and feeds the C++ backend |
+| 🔄 **SSE Streaming** | Server-Sent Events push ETAs, incidents, and predictions to the frontend live |
+| 🧰 **User Reports + Dispatcher API (Python)** | REST endpoints for crowdsourced incidents + verified operator input |
+| 🎯 **Proactive Alerts** | “⚠ Likely +12 min delay” warnings before the delay is visible in typical apps |
 
+---
 
-**Python backend**
-https://www.youtube.com/watch?v=KIcf96p7hjo
+## 📹 Demos
 
-**Real time tracking: **
-https://youtu.be/n9ISpOYGZ4o
+**Website (demos hub)**  
+- https://tg3sixo.surge.sh/#demos
 
+**User-Reported Disruptions (video)**  
+- https://youtu.be/ThRl0xW28rs
 
-🎥 Full System Demo	YouTube – Journey Radar Demo
+**Full System Demo (video)**  
+- TODO: paste your full system demo YouTube link here
 
+**Routing Engine Deep Dive (video)**  
+- TODO: paste link
 
+**TransitDNA Prediction Showcase (video)**  
+- TODO: paste link
 
-<img width="600" alt="Architecture Overview"
-     src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/Architecture-min.png" />
+---
 
+## 🧱 Architecture (Preview)
 
+<p align="center">
+  <img width="820" alt="Architecture Overview"
+       src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/Architecture-min.png" />
+</p>
 
+- Full doc: `docs/Architecture.md` (TODO: update path/name if different)
+- Diagram: `docs/Architecture-min.png`
 
-💡 How It Works
+---
 
-==Official feeds (GTFS Realtime) and user reports stream into the backend.
-==Transit DNA analyzes recent incident patterns to predict upcoming delays.
-==Routing Engine recomputes paths with adjusted weights in real time.
-==Frontend (Leaflet dashboard) displays baseline vs. adjusted routes, ETAs, and proactive alerts.
-==Personas simulate daily commuters, while calendar integration detects potential conflicts (“⚠ Meeting at 09:00 may conflict with ETA 09:10”).
+## ❓ Why this exists
 
-🧮 Predictive Engine
+Most popular transit apps are **reactive**: they show delays *after* they happen and often can’t merge operator + community context.
 
-Powered by a lightweight ML heuristic system:
-Rolling averages & node severity models.
-Optional integration with Amazon Chronos (time-series model) via Python.
+Journey Radar aims to be **predictive and explainable**:
+- predict delay likelihood from recent patterns,
+- recompute routes instantly as incidents arrive,
+- stream changes live to the UI,
+- optionally simulate “personas” + calendar conflicts.
 
-Predicts delay windows, e.g.
-96% chance of +12 min delay at Stop 4.
+---
 
-💾 Tech Stack
-Layer	Technology
-Backend Core	C++17, cpp-httplib, nlohmann::json
-Concurrency	std::thread, mutex, condition_variable
-Prediction	Custom TransitDNA engine / Chronos (Python)
-APIs	FastAPI (Python), REST, SSE
-Frontend	Vanilla JS + Leaflet (map visualization)
-Data	GTFS-RT (Kraków), .ics Calendar, User Reports
-Future DB	SQLite / PostgreSQL planned
+## ⚙️ System Overview
 
+1) **Live data + reports** stream into the backend  
+2) **TransitDNA** updates a rolling model of recent disruption severity  
+3) **Routing Engine** recomputes shortest path with incident-adjusted weights  
+4) **Frontend dashboard (Leaflet)** shows:
+   - baseline vs adjusted route
+   - ETA and delay
+   - proactive warnings
+5) **Personas + calendar** flag real-world impact:
+   - “⚠ Meeting at 09:00 may conflict with ETA 09:10”
 
-⚙️ Installation & Running
-1️⃣ Backend (C++)
-# Compile and run
-mkdir build && cd build
+---
+
+## 🧠 Predictive Engine (TransitDNA)
+
+TransitDNA is intentionally lightweight and hackathon-friendly:
+- rolling averages
+- node/segment severity scores
+- “recent history” heuristics for probability + delay windows
+
+Example output:
+- **96% chance of +12 min delay at Stop 4**
+
+Optional experiment:
+- time-series model integration via Python (e.g., Amazon Chronos or similar)
+
+> Note: This is not a full ML product — it’s a proof-of-concept prediction layer designed to evolve.
+
+---
+
+## 💾 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Core backend | **C++17**, cpp-httplib, nlohmann::json |
+| Concurrency | std::thread, mutex, condition_variable |
+| Prediction | TransitDNA heuristic engine (optional Python model integration) |
+| APIs | REST + SSE, FastAPI sidecars |
+| Frontend | Vanilla JS + Leaflet |
+| Data | GTFS Realtime, `.ics` calendar files, user/dispatcher reports |
+| Planned DB | SQLite → PostgreSQL/Timescale (roadmap) |
+
+---
+
+## 🚀 Quickstart
+
+### 1) Build & run backend (C++)
+
+```bash
+mkdir build
+cd build
 cmake ..
-make
+cmake --build .
 ./journey_radar
-Server starts on http://localhost:8080
+```
 
-2️⃣ Frontend
-Open frontend/index.html in your browser.
-It connects automatically via SSE to backend on port 8080.
+**Server default:**  
+- http://localhost:8080
 
-3️⃣ Python Services
-a) GTFS Sidecar
+> If you’re on **Windows**, use your usual CMake generator (**MSVC/MinGW**). The commands still apply via **CLion** or terminal.
+
+### 2) Run frontend
+Open:
+- `frontend/index.html`
+
+The frontend connects to the backend via **SSE** (port `8080`).
+
+### 3) Run Python services (sidecars)
+
+#### a) GTFS sidecar
+```
 cd python_code
 uvicorn gtfs_sidecar:app --port 9999
-
-b) User API
+b) User reports / dispatcher API
+bash
+Copy code
 cd python_code/UserAPI
 python main.py
-# Docs at: http://127.0.0.1:8000/docs
+```
 
+## 🧩 Services & Modules
+C++ Core (Performance-Critical)
+Route graph + Dijkstra
+Incident-weight adjustment
+SSE event stream
+Prediction integration (TransitDNA outputs)
+Python Sidecars (Replaceable / Iteration-Friendly)
+GTFS-RT ingestion & normalization
+Incident report endpoints
+Experimentation hooks for model pipelines
 
+## 🆚 How it compares to “reactive” apps
+Problem in typical systems	Journey Radar approach
+Delays appear after they happen	Forecast likely delays from recent patterns
+Data silos (operator vs user)	Merge GTFS + crowdsourced + dispatcher inputs
+No personalization	Persona journeys simulate real commuter impact
+Limited integration surfaces	REST + SSE built for dashboards + operator workflows
 
-🧭 Routing Engine Explained	 Watch → Add link here for youTube
-🔮 Transit DNA Prediction Showcase	Watch →
-//Please add more video links here // 
-
-🆚 Why It’s Better Than Existing Solutions
-Problem with existing systems	How Journey Radar solves it
-Reactive apps (Google Maps, Jak Dojadę) show delays after they happen	Predictive alerts forecast upcoming disruptions
-Data silos between operators and users	Unified intelligence merges GTFS, reports, and calendar data
-No personalization	Personas adapt forecasts to individual journeys
-No open APIs for dispatchers	REST endpoints allow seamless dispatcher integration
-Limited local insights	Community-verified reports enhance accuracy
-
-🌍 Scalability & Market
-Works with any city providing GTFS Realtime feeds.
-Extendable to sensors on buses/trams or IoT traffic devices.
-Cloud-ready microservice design (FastAPI + C++).
-Potential integration with city dashboards, Google Transit, or MaaS platforms.
-
-🧑‍💻 Team & Credits
+## 🧑‍💻 Team & Credits
 Lead Developer: Swastik — C++ Systems Engineer & Product Architect
-Collaborators: Data & AI Integration – Marvellous, Frontend Design – Swastik , Thofeeq , API for Traffic Data visualization - Kubo , Project Management - Binh
 
-🏁 Future Roadmap
-Persistent database (SQLite → Postgres + Timescale).
-Extended AI pipeline (Chronos + Prophet models).
-Mobile app & Push Notifications.
-Reward system & gamified user submissions.
-City dashboard for dispatchers and operators.
+Collaborators
+
+Data & AI integration — Marvellous
+
+Frontend design — Swastik, Thofeeq
+
+Traffic data visualization API — Kubo
+
+Project management — Binh
+
+🏁 Roadmap
+ Persist prediction + incident history (SQLite → Postgres/Timescale)
+ Improve forecasting pipeline (Chronos/Prophet experiments)
+ Mobile app + push notifications
+ Reward system / gamified user submissions
+ Operator dashboard mode (dispatcher tooling)
 
 🛡️ License
-MIT License — free for non-commercial and educational use.
+MIT License — free for educational and non-commercial use.
+ 
+ 
+ ## Kraków Public Transport Live Map (Streamlit)
+A standalone Streamlit app that shows live bus and tram positions using GTFS Realtime data.
 
+# Features
+Real-time tracking of buses/trams
+Vehicle delay display
+Color-coded markers:
+Green: on time / minor delay
+Red: delayed > 2 minutes
+Blue: early > 1 minute
+Gray: delay unavailable
+Interactive map via Folium
 
-
-
-# Kraków Public Transport Live Map - Part of Project.
-
-A Streamlit app that shows live bus and tram positions in Kraków using GTFS Realtime data from Zarząd Transportu Publicznego (ZTP).  
-
-## Features
-
-- Real-time tracking of buses and trams.
-- Shows delays for each vehicle.
-- Color-coded markers based on delay:
-  - **Green**: on time or minor delay
-  - **Red**: delayed > 2 minutes
-  - **Blue**: running early > 1 minute
-  - **Gray**: delay data unavailable
-- Interactive map powered by Folium.
-
-## Installation
-
-1. Create a virtual environment and activate it:
-
-- On Linux/Mac:
 ```
 python -m venv venv
+# Linux/Mac:
 source venv/bin/activate
-```
 
-- On Windows:
-```
-python -m venv venv
-.venv\Scripts\activate
-```
+# Windows:
+# .\venv\Scripts\activate
 
-2. Install dependencies:
-```
 pip install -r requirements.txt
+python -m streamlit run ./python_code/krakow_bus_live/app.py
+
 ```
-
-5. Run the app:
-```
- python -m streamlit run .\python_code\krakow_bus_live\app.py
-```
-
-## Usage
-
-- The map centers on Kraków by default.
-- Click on any vehicle marker to see:
-  - Vehicle ID
-  - Route number
-  - Delay in seconds
-- Marker colors:
-  - Green: on time or minor delay
-  - Red: delayed > 2 minutes
-  - Blue: early > 1 minute
-  - Gray: delay unknown
-
 ## Notes
+SSL verification may be disabled due to certificate issues with the source endpoint.
 
-- SSL verification is disabled in requests due to certificate issues with the ZTP endpoint.
-- Trip delays are fetched from GTFS `TripUpdates` feed and linked to vehicle positions from `VehiclePositions`.
-- Data refresh is cached for 60 seconds for performance.
+Vehicle positions + trip updates are combined to compute delays.
 
-## Dependencies
-
-- `streamlit`
-- `requests`
-- `folium`
-- `streamlit-folium`
-- `gtfs-realtime-bindings` (Google GTFS Realtime protobuf)
+Data refresh is cached (e.g., 60s) for performance
