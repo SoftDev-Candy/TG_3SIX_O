@@ -59,17 +59,23 @@ It’s designed as a hackathon-style proof-of-concept that is **fast, debuggable
 **Website (demos hub)**  
 - https://tg3sixo.surge.sh/#demos
 
-**User-Reported Disruptions (video)**  
-- https://youtu.be/ThRl0xW28rs
+- **Full System Demo (video)** 
+## 🎥 Full Demo
 
-**Full System Demo (video)**  
-- TODO: paste your full system demo YouTube link here
+▶ **[Watch on GitHub](https://github.com/SoftDev-Candy/TG_3SIX_O/blob/main/docs/TG_3IXO.mp4)**
 
-**Routing Engine Deep Dive (video)**  
-- TODO: paste link
+</div>
+       
 
-**TransitDNA Prediction Showcase (video)**  
-- TODO: paste link
+**Krakow live bus map (video)**  
+
+<p align="center">
+  <img width="820" alt="KrakowBusmap"
+       src="https://raw.githubusercontent.com/SoftDev-Candy/TG_3SIX_O/main/docs/realtime1.png" />
+</p>
+
+
+
 
 ---
 
