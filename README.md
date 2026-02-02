@@ -152,3 +152,102 @@ cd build
 cmake ..
 cmake --build .
 ./journey_radar
+```
+
+**Server default:**  
+- http://localhost:8080
+
+> If you’re on **Windows**, use your usual CMake generator (**MSVC/MinGW**). The commands still apply via **CLion** or terminal.
+
+### 2) Run frontend
+Open:
+- `frontend/index.html`
+
+The frontend connects to the backend via **SSE** (port `8080`).
+
+### 3) Run Python services (sidecars)
+
+#### a) GTFS sidecar
+```
+cd python_code
+uvicorn gtfs_sidecar:app --port 9999
+b) User reports / dispatcher API
+bash
+Copy code
+cd python_code/UserAPI
+python main.py
+```
+
+## 🧩 Services & Modules
+C++ Core (Performance-Critical)
+Route graph + Dijkstra
+Incident-weight adjustment
+SSE event stream
+Prediction integration (TransitDNA outputs)
+Python Sidecars (Replaceable / Iteration-Friendly)
+GTFS-RT ingestion & normalization
+Incident report endpoints
+Experimentation hooks for model pipelines
+
+## 🆚 How it compares to “reactive” apps
+Problem in typical systems	Journey Radar approach
+Delays appear after they happen	Forecast likely delays from recent patterns
+Data silos (operator vs user)	Merge GTFS + crowdsourced + dispatcher inputs
+No personalization	Persona journeys simulate real commuter impact
+Limited integration surfaces	REST + SSE built for dashboards + operator workflows
+
+## 🧑‍💻 Team & Credits
+Lead Developer: Swastik — C++ Systems Engineer & Product Architect
+
+Collaborators
+
+Data & AI integration — Marvellous
+
+Frontend design — Swastik, Thofeeq
+
+Traffic data visualization API — Kubo
+
+Project management — Binh
+
+🏁 Roadmap
+ Persist prediction + incident history (SQLite → Postgres/Timescale)
+ Improve forecasting pipeline (Chronos/Prophet experiments)
+ Mobile app + push notifications
+ Reward system / gamified user submissions
+ Operator dashboard mode (dispatcher tooling)
+
+🛡️ License
+MIT License — free for educational and non-commercial use.
+ 
+ 
+ ## Kraków Public Transport Live Map (Streamlit)
+A standalone Streamlit app that shows live bus and tram positions using GTFS Realtime data.
+
+# Features
+Real-time tracking of buses/trams
+Vehicle delay display
+Color-coded markers:
+Green: on time / minor delay
+Red: delayed > 2 minutes
+Blue: early > 1 minute
+Gray: delay unavailable
+Interactive map via Folium
+
+```
+python -m venv venv
+# Linux/Mac:
+source venv/bin/activate
+
+# Windows:
+# .\venv\Scripts\activate
+
+pip install -r requirements.txt
+python -m streamlit run ./python_code/krakow_bus_live/app.py
+
+```
+## Notes
+SSL verification may be disabled due to certificate issues with the source endpoint.
+
+Vehicle positions + trip updates are combined to compute delays.
+
+Data refresh is cached (e.g., 60s) for performance
